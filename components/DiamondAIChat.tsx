@@ -17,7 +17,7 @@ interface DiamondAIChatProps {
 export default function DiamondAIChat({ userRole }: DiamondAIChatProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
-  const [messages, setMessages] = useState<Message[]>([
+  const [messages, setMessages] = useState<Message[]>(() => [
     {
       id: '1',
       role: 'assistant',

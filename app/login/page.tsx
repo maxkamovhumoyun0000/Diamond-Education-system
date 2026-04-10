@@ -10,6 +10,7 @@ import { Eye, EyeOff, Mail, Lock } from 'lucide-react'
 export default function LoginPage() {
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
+  const [selectedRole, setSelectedRole] = useState<'student' | 'teacher' | 'admin' | 'support'>('student')
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -96,9 +97,10 @@ export default function LoginPage() {
                 {(['student', 'teacher', 'admin', 'support'] as const).map((r) => (
                   <button
                     key={r}
-                    onClick={() => setRole(r)}
+                    type="button"
+                    onClick={() => setSelectedRole(r)}
                     className={`py-2 px-3 rounded-lg font-medium transition-all capitalize ${
-                      role === r
+                      selectedRole === r
                         ? 'bg-primary text-white'
                         : 'bg-surface-hover text-text-primary hover:border-primary border border-border'
                     }`}
