@@ -1,9 +1,20 @@
+'use client'
+
+import { useState } from 'react'
 import DashboardLayout from '@/components/DashboardLayout'
 import StatCard from '@/components/StatCard'
 import ProgressCard from '@/components/ProgressCard'
-import { Flame, Zap, Trophy, Coins } from 'lucide-react'
+import { Flame, Zap, Trophy, Coins, ChevronRight } from 'lucide-react'
 
 export default function StudentDashboard() {
+  const [showCourseModal, setShowCourseModal] = useState(false)
+  const [selectedCourse, setSelectedCourse] = useState<string | null>(null)
+
+  const openCourse = (course: string) => {
+    setSelectedCourse(course)
+    setShowCourseModal(true)
+  }
+
   return (
     <DashboardLayout role="student" userName="Ahmed">
       <div className="space-y-8">
@@ -112,16 +123,52 @@ export default function StudentDashboard() {
                 {['Master Tenses', 'Advanced Vocabulary', 'Conversation Skills', 'Listening Practice'].map((course) => (
                   <button
                     key={course}
-                    className="p-4 border border-border rounded-lg hover:bg-surface-hover hover:border-primary transition-colors text-left"
+                    onClick={() => openCourse(course)}
+                    className="p-4 border border-border rounded-lg hover:bg-surface-hover hover:border-primary transition-colors text-left active:scale-95 group"
                   >
-                    <p className="font-medium text-text-primary">{course}</p>
-                    <p className="text-xs text-text-secondary mt-1">Start learning →</p>
+                    <p className="font-medium text-text-primary group-hover:text-primary transition-colors">{course}</p>
+                    <p className="text-xs text-text-secondary mt-1 flex items-center gap-1">Start learning <ChevronRight size={14} /></p>
                   </button>
                 ))}
               </div>
             </div>
           </div>
         </div>
+
+        {/* Course Modal */}
+        {showCourseModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-surface rounded-lg border border-border p-6 max-w-md w-full">
+              <h2 className="text-2xl font-bold text-text-primary mb-4">{selectedCourse}</h2>
+              <div className="space-y-4 mb-6">
+                <p className="text-text-secondary">Learn the essential skills and concepts covered in this course.</p>
+                <div className="bg-accent/10 rounded-lg p-4 space-y-2">
+                  <p className="text-sm font-medium text-text-primary">Course Details:</p>
+                  <ul className="text-sm text-text-secondary space-y-1">
+                    <li>Duration: 4-6 weeks</li>
+                    <li>Level: Intermediate</li>
+                    <li>Lessons: 24</li>
+                    <li>Reward: 500 D&apos;Coins</li>
+                  </ul>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setShowCourseModal(false)}
+                  className="flex-1 px-4 py-2 rounded-lg border border-border hover:bg-surface-hover transition-colors font-medium"
+                >
+                  Close
+                </button>
+                <button 
+                  onClick={() => setShowCourseModal(false)}
+                  className="flex-1 px-4 py-2 rounded-lg bg-accent text-white hover:opacity-90 transition-colors font-medium"
+                >
+                  Enroll Now
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   )

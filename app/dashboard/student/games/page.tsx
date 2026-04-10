@@ -1,7 +1,17 @@
+'use client'
+
+import { useState } from 'react'
 import DashboardLayout from '@/components/DashboardLayout'
-import { Play, RotateCcw, Trophy, Clock } from 'lucide-react'
+import { Play, RotateCcw, Trophy, Clock, Zap } from 'lucide-react'
 
 export default function StudentGames() {
+  const [showGameModal, setShowGameModal] = useState(false)
+  const [selectedGame, setSelectedGame] = useState<any>(null)
+
+  const openGame = (game: any) => {
+    setSelectedGame(game)
+    setShowGameModal(true)
+  }
   const games = [
     {
       id: 1,
@@ -152,7 +162,10 @@ export default function StudentGames() {
                   </div>
 
                   {/* Play Button */}
-                  <button className="w-full py-2 px-4 rounded-lg bg-primary text-white hover:bg-primary-dark transition-colors font-medium flex items-center justify-center gap-2">
+                  <button 
+                    onClick={() => openGame(game)}
+                    className="w-full py-2 px-4 rounded-lg bg-primary text-white hover:bg-primary-dark transition-colors font-medium flex items-center justify-center gap-2 active:scale-95"
+                  >
                     <Play size={16} />
                     Play Now
                   </button>
@@ -226,6 +239,60 @@ export default function StudentGames() {
             </div>
           </div>
         </div>
+
+        {/* Game Modal */}
+        {showGameModal && selectedGame && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-surface rounded-lg border border-border p-6 max-w-md w-full">
+              <div className="flex items-start justify-between mb-4">
+                <h2 className="text-2xl font-bold text-text-primary">{selectedGame.name}</h2>
+                <span className="text-4xl">{selectedGame.icon}</span>
+              </div>
+              <p className="text-text-secondary mb-6">{selectedGame.description}</p>
+              
+              <div className="bg-accent/10 rounded-lg p-4 space-y-3 mb-6">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-text-secondary">Difficulty</p>
+                  <p className="font-medium text-text-primary">{selectedGame.difficulty}</p>
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-text-secondary">Duration</p>
+                  <p className="font-medium text-text-primary flex items-center gap-1"><Clock size={14} /> {selectedGame.timePerGame}</p>
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-text-secondary">Your High Score</p>
+                  <p className="font-medium text-primary text-lg">{selectedGame.highScore.toLocaleString()}</p>
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-text-secondary">Reward</p>
+                  <p className="font-medium text-accent text-sm bg-accent/20 px-3 py-1 rounded-full">{selectedGame.reward}</p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => {
+                    setShowGameModal(false)
+                    setSelectedGame(null)
+                  }}
+                  className="flex-1 px-4 py-2 rounded-lg border border-border hover:bg-surface-hover transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => {
+                    setShowGameModal(false)
+                    setSelectedGame(null)
+                  }}
+                  className="flex-1 px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary-dark transition-colors font-medium flex items-center justify-center gap-2"
+                >
+                  <Play size={16} />
+                  Start Game
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   )

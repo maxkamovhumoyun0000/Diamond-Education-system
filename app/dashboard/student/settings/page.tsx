@@ -1,7 +1,14 @@
+'use client'
+
+import { useState } from 'react'
 import DashboardLayout from '@/components/DashboardLayout'
-import { Bell, Lock, Globe, Eye, Mail, Save } from 'lucide-react'
+import { Bell, Lock, Globe, Eye, Mail, Save, CheckCircle } from 'lucide-react'
 
 export default function StudentSettings() {
+  const [hasChanges, setHasChanges] = useState(false)
+  const [showSaveSuccess, setShowSaveSuccess] = useState(false)
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
   return (
     <DashboardLayout role="student" userName="Ahmed">
       <div className="space-y-8">
@@ -72,10 +79,23 @@ export default function StudentSettings() {
               </div>
             </div>
 
-            <button className="w-full md:w-auto px-6 py-2 rounded-lg bg-primary text-white hover:bg-primary-dark transition-colors font-medium flex items-center justify-center gap-2">
+            <button 
+              onClick={() => {
+                setShowSaveSuccess(true)
+                setHasChanges(false)
+                setTimeout(() => setShowSaveSuccess(false), 3000)
+              }}
+              className="w-full md:w-auto px-6 py-2 rounded-lg bg-primary text-white hover:bg-primary-dark transition-colors font-medium flex items-center justify-center gap-2 active:scale-95"
+            >
               <Save size={18} />
               Save Changes
             </button>
+            {showSaveSuccess && (
+              <div className="flex items-center gap-2 text-green-600 text-sm">
+                <CheckCircle size={18} />
+                Changes saved successfully!
+              </div>
+            )}
           </div>
         </div>
 
@@ -125,7 +145,10 @@ export default function StudentSettings() {
                   <p className="font-medium text-text-primary">Password</p>
                   <p className="text-sm text-text-secondary">Last changed 3 months ago</p>
                 </div>
-                <button className="px-4 py-2 rounded-lg border border-border hover:bg-surface-hover transition-colors font-medium text-sm">
+                <button 
+                  onClick={() => setShowPasswordModal(true)}
+                  className="px-4 py-2 rounded-lg border border-border hover:bg-surface-hover transition-colors font-medium text-sm active:scale-95"
+                >
                   Change Password
                 </button>
               </div>
@@ -215,12 +238,78 @@ export default function StudentSettings() {
               <p className="text-sm text-red-600 mb-3">
                 Once you delete your account, there is no going back. Please be certain.
               </p>
-              <button className="px-6 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors font-medium">
+              <button 
+                onClick={() => setShowDeleteModal(true)}
+                className="px-6 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors font-medium active:scale-95"
+              >
                 Delete Account
               </button>
             </div>
           </div>
         </div>
+
+        {/* Password Change Modal */}
+        {showPasswordModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-surface rounded-lg border border-border p-6 max-w-md w-full">
+              <h2 className="text-2xl font-bold text-text-primary mb-4">Change Password</h2>
+              <div className="space-y-4">
+                <input type="password" placeholder="Current Password" className="w-full px-4 py-2 border border-border rounded-lg bg-surface text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary" />
+                <input type="password" placeholder="New Password" className="w-full px-4 py-2 border border-border rounded-lg bg-surface text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary" />
+                <input type="password" placeholder="Confirm New Password" className="w-full px-4 py-2 border border-border rounded-lg bg-surface text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary" />
+              </div>
+              <div className="flex gap-3 mt-6">
+                <button 
+                  onClick={() => setShowPasswordModal(false)}
+                  className="flex-1 px-4 py-2 rounded-lg border border-border hover:bg-surface-hover transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => {
+                    setShowPasswordModal(false)
+                    setShowSaveSuccess(true)
+                    setTimeout(() => setShowSaveSuccess(false), 3000)
+                  }}
+                  className="flex-1 px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary-dark transition-colors font-medium"
+                >
+                  Update Password
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Account Modal */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-surface rounded-lg border border-border p-6 max-w-md w-full">
+              <h2 className="text-2xl font-bold text-red-600 mb-2">Delete Account</h2>
+              <p className="text-text-secondary mb-6 text-sm">This action cannot be undone. All your data will be permanently deleted.</p>
+              <div className="space-y-4 mb-6">
+                <input type="password" placeholder="Enter your password to confirm" className="w-full px-4 py-2 border border-border rounded-lg bg-surface text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-red-500" />
+                <label className="flex items-center gap-3">
+                  <input type="checkbox" className="w-4 h-4 accent-red-500 cursor-pointer" />
+                  <span className="text-sm text-text-secondary">I understand this cannot be undone</span>
+                </label>
+              </div>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setShowDeleteModal(false)}
+                  className="flex-1 px-4 py-2 rounded-lg border border-border hover:bg-surface-hover transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => setShowDeleteModal(false)}
+                  className="flex-1 px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-red-600 transition-colors font-medium"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   )

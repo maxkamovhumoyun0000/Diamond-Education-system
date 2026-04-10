@@ -1,7 +1,15 @@
+'use client'
+
+import { useState } from 'react'
 import DashboardLayout from '@/components/DashboardLayout'
-import { Calendar, AlertCircle, CheckCircle, Clock, Download, Upload } from 'lucide-react'
+import { Calendar, AlertCircle, CheckCircle, Clock, Download, Upload, Search, Filter, Send } from 'lucide-react'
 
 export default function StudentHomework() {
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filterStatus, setFilterStatus] = useState('all')
+  const [showSubmitModal, setShowSubmitModal] = useState(false)
+  const [selectedAssignment, setSelectedAssignment] = useState<any>(null)
+  const [submissionText, setSubmissionText] = useState('')
   const assignments = [
     {
       id: 1,
@@ -104,13 +112,44 @@ export default function StudentHomework() {
     }
   }
 
+  const filteredAssignments = assignments.filter(a => {
+    const matchesSearch = a.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                         a.subject.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesFilter = filterStatus === 'all' || a.status === filterStatus
+    return matchesSearch && matchesFilter
+  })
+
   return (
     <DashboardLayout role="student" userName="Ahmed">
       <div className="space-y-8">
         {/* Header */}
         <div>
           <h1 className="text-4xl font-bold text-text-primary mb-2">My Homework</h1>
-          <p className="text-text-secondary">Track and submit your assignments</p>
+          <p className="text-text-secondary">Track and submit your assignments ({filteredAssignments.length})</p>
+        </div>
+
+        {/* Filters */}
+        <div className="flex gap-4 flex-col sm:flex-row">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={20} />
+            <input
+              type="text"
+              placeholder="Search assignments..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-surface text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+          <select 
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="px-4 py-2 rounded-lg border border-border bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="all">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="submitted">Submitted</option>
+            <option value="completed">Completed</option>
+          </select>
         </div>
 
         {/* Stats */}
@@ -132,7 +171,7 @@ export default function StudentHomework() {
         <div className="space-y-4">
           <h2 className="text-2xl font-semibold text-text-primary">Your Assignments</h2>
           <div className="space-y-4">
-            {assignments
+            {filteredAssignments
               .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
               .map((assignment) => {
                 const daysLeft = getDaysUntilDue(assignment.dueDate)
@@ -188,12 +227,19 @@ export default function StudentHomework() {
 
                         {/* Actions */}
                         {assignment.status === 'pending' && (
-                          <button className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary-dark transition-colors font-medium text-sm">
+                          <button 
+                            onClick={() => {
+                              setSelectedAssignment(assignment)
+                              setShowSubmitModal(true)
+                            }}
+                            className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary-dark transition-colors font-medium text-sm active:scale-95 flex items-center gap-1"
+                          >
+                            <Send size={14} />
                             Submit
                           </button>
                         )}
                         {(assignment.status === 'submitted' || assignment.status === 'completed') && (
-                          <button className="px-4 py-2 rounded-lg border border-border hover:bg-surface-hover transition-colors font-medium text-sm flex items-center gap-2">
+                          <button className="px-4 py-2 rounded-lg border border-border hover:bg-surface-hover transition-colors font-medium text-sm flex items-center gap-2 active:scale-95">
                             <Download size={16} />
                             Download
                           </button>
@@ -212,6 +258,52 @@ export default function StudentHomework() {
             <span className="font-semibold">Tip:</span> Submit assignments before the due date for the best grades. Late submissions may have point deductions.
           </p>
         </div>
+
+        {/* Submit Modal */}
+        {showSubmitModal && selectedAssignment && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-surface rounded-lg border border-border p-6 max-w-md w-full">
+              <h2 className="text-2xl font-bold text-text-primary mb-2">Submit Assignment</h2>
+              <p className="text-text-secondary text-sm mb-4">{selectedAssignment.title}</p>
+              <div className="space-y-4">
+                <textarea 
+                  placeholder="Type your answer or paste your work here..."
+                  value={submissionText}
+                  onChange={(e) => setSubmissionText(e.target.value)}
+                  rows={5}
+                  className="w-full px-4 py-2 border border-border rounded-lg bg-surface text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                <div className="border-2 border-dashed border-border rounded-lg p-4 text-center hover:border-primary transition-colors cursor-pointer">
+                  <Upload size={24} className="mx-auto text-text-secondary mb-2" />
+                  <p className="text-sm text-text-secondary">Drag and drop files or click to upload</p>
+                </div>
+              </div>
+              <div className="flex gap-3 mt-6">
+                <button 
+                  onClick={() => {
+                    setShowSubmitModal(false)
+                    setSelectedAssignment(null)
+                    setSubmissionText('')
+                  }}
+                  className="flex-1 px-4 py-2 rounded-lg border border-border hover:bg-surface-hover transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => {
+                    setShowSubmitModal(false)
+                    setSelectedAssignment(null)
+                    setSubmissionText('')
+                  }}
+                  className="flex-1 px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary-dark transition-colors font-medium flex items-center justify-center gap-2"
+                >
+                  <Send size={16} />
+                  Submit
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   )

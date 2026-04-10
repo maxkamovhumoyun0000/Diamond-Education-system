@@ -1,8 +1,17 @@
+'use client'
+
+import { useState } from 'react'
 import DashboardLayout from '@/components/DashboardLayout'
 import ProgressCard from '@/components/ProgressCard'
-import { BookOpen, Volume2, RefreshCw } from 'lucide-react'
+import { BookOpen, Volume2, RefreshCw, Plus, Trash2 } from 'lucide-react'
 
 export default function StudentVocabulary() {
+  const [showAddWordModal, setShowAddWordModal] = useState(false)
+  const [showCategoryModal, setShowCategoryModal] = useState(false)
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [newWord, setNewWord] = useState('')
+  const [newPronunciation, setNewPronunciation] = useState('')
+  const [newMeaning, setNewMeaning] = useState('')
   const words = [
     { word: 'Persevere', pronunciation: '/pərˈsɪvər/', meaning: 'Continue despite difficulty', example: 'She persevered through challenges', learned: true },
     { word: 'Ephemeral', pronunciation: '/ɪˈfɛm(ə)rəl/', meaning: 'Lasting a very short time', example: 'Beauty is ephemeral', learned: true },
@@ -58,7 +67,11 @@ export default function StudentVocabulary() {
             {categories.map((cat) => (
               <button
                 key={cat.name}
-                className="p-4 rounded-lg bg-surface border border-border hover:border-primary hover:shadow-glass transition-all text-left group"
+                onClick={() => {
+                  setSelectedCategory(cat.name)
+                  setShowCategoryModal(true)
+                }}
+                className="p-4 rounded-lg bg-surface border border-border hover:border-primary hover:shadow-glass transition-all text-left group active:scale-95"
               >
                 <p className="font-semibold text-text-primary group-hover:text-primary transition-colors">{cat.name}</p>
                 <p className="text-sm text-text-secondary mt-2">{cat.learned}/{cat.words} words</p>
@@ -112,11 +125,11 @@ export default function StudentVocabulary() {
                         Learned ✓
                       </span>
                     ) : (
-                      <button className="px-3 py-1 rounded-lg bg-primary text-white text-xs font-medium hover:bg-primary-dark transition-colors">
+                      <button className="px-3 py-1 rounded-lg bg-primary text-white text-xs font-medium hover:bg-primary-dark transition-colors active:scale-95">
                         Learn
                       </button>
                     )}
-                    <button className="p-2 rounded-lg hover:bg-surface-hover transition-colors text-text-secondary hover:text-primary">
+                    <button className="p-2 rounded-lg hover:bg-surface-hover transition-colors text-text-secondary hover:text-primary active:scale-95">
                       <RefreshCw size={16} />
                     </button>
                   </div>
@@ -128,16 +141,103 @@ export default function StudentVocabulary() {
 
         {/* Action Buttons */}
         <div className="flex gap-3 flex-wrap">
-          <button className="px-6 py-3 rounded-lg bg-primary text-white hover:bg-primary-dark transition-colors font-medium">
+          <button 
+            onClick={() => setShowAddWordModal(true)}
+            className="px-6 py-3 rounded-lg bg-primary text-white hover:bg-primary-dark transition-colors font-medium flex items-center gap-2 active:scale-95"
+          >
+            <Plus size={20} />
             Add New Word
           </button>
-          <button className="px-6 py-3 rounded-lg border border-border hover:bg-surface-hover transition-colors font-medium">
+          <button className="px-6 py-3 rounded-lg border border-border hover:bg-surface-hover transition-colors font-medium active:scale-95">
             Quiz Mode
           </button>
-          <button className="px-6 py-3 rounded-lg border border-border hover:bg-surface-hover transition-colors font-medium">
+          <button className="px-6 py-3 rounded-lg border border-border hover:bg-surface-hover transition-colors font-medium active:scale-95">
             Flashcards
           </button>
         </div>
+
+        {/* Add Word Modal */}
+        {showAddWordModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-surface rounded-lg border border-border p-6 max-w-md w-full">
+              <h2 className="text-2xl font-bold text-text-primary mb-4">Add New Word</h2>
+              <div className="space-y-4">
+                <input 
+                  type="text" 
+                  placeholder="Word" 
+                  value={newWord}
+                  onChange={(e) => setNewWord(e.target.value)}
+                  className="w-full px-4 py-2 border border-border rounded-lg bg-surface text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary" 
+                />
+                <input 
+                  type="text" 
+                  placeholder="Pronunciation" 
+                  value={newPronunciation}
+                  onChange={(e) => setNewPronunciation(e.target.value)}
+                  className="w-full px-4 py-2 border border-border rounded-lg bg-surface text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary" 
+                />
+                <input 
+                  type="text" 
+                  placeholder="Meaning" 
+                  value={newMeaning}
+                  onChange={(e) => setNewMeaning(e.target.value)}
+                  className="w-full px-4 py-2 border border-border rounded-lg bg-surface text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary" 
+                />
+              </div>
+              <div className="flex gap-3 mt-6">
+                <button 
+                  onClick={() => setShowAddWordModal(false)}
+                  className="flex-1 px-4 py-2 rounded-lg border border-border hover:bg-surface-hover transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => {
+                    setShowAddWordModal(false)
+                    setNewWord('')
+                    setNewPronunciation('')
+                    setNewMeaning('')
+                  }}
+                  className="flex-1 px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary-dark transition-colors font-medium"
+                >
+                  Add Word
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Category Modal */}
+        {showCategoryModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-surface rounded-lg border border-border p-6 max-w-md w-full">
+              <h2 className="text-2xl font-bold text-text-primary mb-4">{selectedCategory}</h2>
+              <p className="text-text-secondary mb-6">
+                Practice {selectedCategory} vocabulary to improve your English skills.
+              </p>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => {
+                    setShowCategoryModal(false)
+                    setSelectedCategory(null)
+                  }}
+                  className="flex-1 px-4 py-2 rounded-lg border border-border hover:bg-surface-hover transition-colors font-medium"
+                >
+                  Close
+                </button>
+                <button 
+                  onClick={() => {
+                    setShowCategoryModal(false)
+                    setSelectedCategory(null)
+                  }}
+                  className="flex-1 px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary-dark transition-colors font-medium"
+                >
+                  Study Now
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   )

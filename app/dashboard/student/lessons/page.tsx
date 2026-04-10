@@ -1,7 +1,13 @@
+'use client'
+
+import { useState } from 'react'
 import DashboardLayout from '@/components/DashboardLayout'
-import { CheckCircle, Clock, Play } from 'lucide-react'
+import { CheckCircle, Clock, Play, Search, Filter } from 'lucide-react'
 
 export default function StudentLessons() {
+  const [searchQuery, setSearchQuery] = useState('')
+  const [filterModule, setFilterModule] = useState('all')
+  const [selectedLesson, setSelectedLesson] = useState<number | null>(null)
   const lessons = [
     {
       id: 1,
@@ -59,18 +65,50 @@ export default function StudentLessons() {
     },
   ]
 
+  const filteredLessons = lessons.filter(lesson => {
+    const matchesSearch = lesson.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                         lesson.module.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesFilter = filterModule === 'all' || lesson.module === filterModule
+    return matchesSearch && matchesFilter
+  })
+
   return (
     <DashboardLayout role="student" userName="Ahmed">
       <div className="space-y-8">
         {/* Header */}
         <div>
           <h1 className="text-4xl font-bold text-text-primary mb-2">My Lessons</h1>
-          <p className="text-text-secondary">Continue learning and track your progress</p>
+          <p className="text-text-secondary">Continue learning and track your progress ({filteredLessons.length})</p>
+        </div>
+
+        {/* Filters */}
+        <div className="flex gap-4 flex-col sm:flex-row">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={20} />
+            <input
+              type="text"
+              placeholder="Search lessons..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-surface text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+          <select 
+            value={filterModule}
+            onChange={(e) => setFilterModule(e.target.value)}
+            className="px-4 py-2 rounded-lg border border-border bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
+          >
+            <option value="all">All Modules</option>
+            <option value="Fundamentals">Fundamentals</option>
+            <option value="Intermediate">Intermediate</option>
+            <option value="Advanced">Advanced</option>
+            <option value="Special">Special</option>
+          </select>
         </div>
 
         {/* Lessons Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {lessons.map((lesson) => (
+          {filteredLessons.map((lesson) => (
             <div
               key={lesson.id}
               className={`rounded-lg border p-6 transition-all ${
@@ -121,7 +159,8 @@ export default function StudentLessons() {
               {/* Action Button */}
               <div className="pt-4 border-t border-border">
                 <button
-                  className={`w-full py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
+                  onClick={() => !lesson.status.includes('locked') && setSelectedLesson(lesson.id)}
+                  className={`w-full py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 active:scale-95 ${
                     lesson.status === 'locked'
                       ? 'bg-surface text-text-secondary cursor-not-allowed'
                       : lesson.status === 'completed'
@@ -151,6 +190,54 @@ export default function StudentLessons() {
             Complete lessons in order to unlock advanced content. Each lesson takes 45-90 minutes to complete.
           </p>
         </div>
+
+        {/* Lesson Modal */}
+        {selectedLesson && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-surface rounded-lg border border-border p-6 max-w-md w-full max-h-96 overflow-y-auto">
+              <h2 className="text-2xl font-bold text-text-primary mb-4">{lessons.find(l => l.id === selectedLesson)?.title}</h2>
+              <div className="space-y-4 mb-6">
+                <div>
+                  <p className="text-sm text-text-secondary mb-2">Module</p>
+                  <p className="font-medium text-text-primary">{lessons.find(l => l.id === selectedLesson)?.module}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-text-secondary mb-2">Duration</p>
+                  <p className="font-medium text-text-primary">{lessons.find(l => l.id === selectedLesson)?.duration}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-text-secondary mb-2">Scheduled Date</p>
+                  <p className="font-medium text-text-primary">{lessons.find(l => l.id === selectedLesson)?.date}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-text-secondary mb-2">Progress</p>
+                  <div className="w-full h-2 bg-surface-hover rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-primary"
+                      style={{ width: `${lessons.find(l => l.id === selectedLesson)?.progress}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-text-secondary mt-2">{lessons.find(l => l.id === selectedLesson)?.progress}% complete</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setSelectedLesson(null)}
+                  className="flex-1 px-4 py-2 rounded-lg border border-border hover:bg-surface-hover transition-colors font-medium"
+                >
+                  Close
+                </button>
+                <button 
+                  onClick={() => setSelectedLesson(null)}
+                  className="flex-1 px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary-dark transition-colors font-medium flex items-center justify-center gap-2"
+                >
+                  <Play size={16} />
+                  Start
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   )
