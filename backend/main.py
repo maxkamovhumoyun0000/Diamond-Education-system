@@ -140,10 +140,19 @@ async def register(user: UserCreate):
         )
     )
 
+class LoginRequest(BaseModel):
+    login_id: str
+    password: str
+
+class TelegramLoginRequest(BaseModel):
+    telegram_id: int
+    init_data: Optional[str] = None
+
 @app.post("/auth/login", response_model=TokenResponse)
-async def login(email: str, password: str):
-    """Login and get JWT token"""
-    # TODO: Implement database operations
+async def login(request: LoginRequest):
+    """Login with login_id and password - role is auto-detected from database"""
+    # TODO: Implement database operations to find user by login_id
+    # Role (login_type) is automatically returned from the database
     user_id = "user_id_from_db"
     token = jwt.encode(
         {"sub": user_id, "exp": datetime.utcnow() + timedelta(hours=24)},
@@ -155,9 +164,42 @@ async def login(email: str, password: str):
         token_type="bearer",
         user=User(
             id=user_id,
-            email=email,
+            email=request.login_id,
             full_name="User Name",
-            role="student",
+            role="student",  # This will be fetched from DB based on login_type
+            created_at=datetime.utcnow()
+        )
+    )
+
+@app.post("/auth/telegram", response_model=TokenResponse)
+async def telegram_login(request: TelegramLoginRequest):
+    """
+    Telegram Mini App authentication
+    - Automatically logs in user if telegram_id exists in database
+    - User must have registered through Telegram bot first
+    - Role is preserved from bot registration
+    """
+    # TODO: Query database for user with this telegram_id
+    # SELECT * FROM users WHERE telegram_id = request.telegram_id
+    
+    # If user not found, raise 404
+    # raise HTTPException(status_code=404, detail="Siz hali botda ro'yxatdan o'tmagansiz")
+    
+    # If found, create token and return user with their role
+    user_id = "user_id_from_db"
+    token = jwt.encode(
+        {"sub": user_id, "telegram_id": request.telegram_id, "exp": datetime.utcnow() + timedelta(hours=24)},
+        SECRET_KEY,
+        algorithm=ALGORITHM
+    )
+    return TokenResponse(
+        access_token=token,
+        token_type="bearer",
+        user=User(
+            id=user_id,
+            email="telegram_user@example.com",
+            full_name="Telegram User",
+            role="student",  # This will be fetched from DB (login_type)
             created_at=datetime.utcnow()
         )
     )

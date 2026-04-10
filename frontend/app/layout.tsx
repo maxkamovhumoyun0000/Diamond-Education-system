@@ -34,6 +34,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
+      <head>
+        {/* Telegram WebApp Script - Required for Mini App functionality */}
+        <script src="https://telegram.org/js/telegram-web-app.js" async />
+      </head>
       <body className="font-sans antialiased">
         <AuthProvider>
           {children}

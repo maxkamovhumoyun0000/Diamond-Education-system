@@ -167,6 +167,16 @@ export const authApi = {
     return response
   },
   
+  // Telegram Mini App authentication
+  loginWithTelegram: async (telegram_id: number, initData?: string): Promise<LoginResponse> => {
+    const response = await apiFetch<LoginResponse>('/auth/telegram', {
+      method: 'POST',
+      body: JSON.stringify({ telegram_id, init_data: initData }),
+    })
+    setAuthToken(response.access_token)
+    return response
+  },
+  
   register: async (data: {
     login_id: string
     password: string
