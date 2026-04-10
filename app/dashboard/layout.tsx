@@ -17,14 +17,18 @@ export default function AdminLayout({
 
   useEffect(() => {
     const checkUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      if (!supabase) {
+        router.push("/auth/login");
+        setLoading(false);
+        return;
+      }
+      
+      const { data } = await supabase.auth.getUser();
 
-      if (!user) {
+      if (!data?.user) {
         router.push("/auth/login");
       } else {
-        setUser(user);
+        setUser(data.user);
       }
       setLoading(false);
     };
@@ -33,7 +37,9 @@ export default function AdminLayout({
   }, [supabase, router]);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
     router.push("/");
   };
 

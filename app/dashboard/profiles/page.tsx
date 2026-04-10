@@ -29,6 +29,8 @@ export default function ProfilesPage() {
   }, []);
 
   const loadProfiles = async () => {
+    if (!supabase) return;
+    
     try {
       const { data, error } = await supabase.from("profiles").select("*").order("created_at", { ascending: false });
 
@@ -51,7 +53,7 @@ export default function ProfilesPage() {
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedProfile) return;
+    if (!selectedProfile || !supabase) return;
 
     setLoading(true);
 
@@ -80,7 +82,7 @@ export default function ProfilesPage() {
   };
 
   const handleDeleteProfile = async (profileId: string) => {
-    if (!confirm("Delete this profile? This action cannot be undone.")) return;
+    if (!confirm("Delete this profile? This action cannot be undone.") || !supabase) return;
 
     try {
       const { error } = await supabase.from("profiles").delete().eq("id", profileId);

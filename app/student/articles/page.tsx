@@ -38,6 +38,8 @@ export default function StudentArticlesPage() {
   }, [filterSubject, filterLevel]);
 
   const loadSubjects = async () => {
+    if (!supabase) return;
+    
     try {
       const { data, error } = await supabase.from("subjects").select("*").eq("is_active", true);
       if (!error && data) {
@@ -49,11 +51,15 @@ export default function StudentArticlesPage() {
   };
 
   const loadArticles = async () => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+    
     try {
       setLoading(true);
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data } = await supabase.auth.getUser();
+      const user = data?.user;
 
       if (!user) return;
 

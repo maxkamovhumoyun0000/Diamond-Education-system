@@ -18,6 +18,12 @@ export default function SignUpPage() {
     setError(null);
     setLoading(true);
 
+    if (!supabase) {
+      setError("Supabase is not configured. Please set up the integration.");
+      setLoading(false);
+      return;
+    }
+
     try {
       const { error: signUpError } = await supabase.auth.signUp({
         email,

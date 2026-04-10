@@ -41,6 +41,8 @@ export default function MessagesPage() {
   }, [activeTab]);
 
   const loadUsers = async () => {
+    if (!supabase) return;
+    
     try {
       const { data, error } = await supabase.from("profiles").select("*");
       if (!error && data) {
@@ -52,10 +54,11 @@ export default function MessagesPage() {
   };
 
   const loadMessages = async () => {
+    if (!supabase) return;
+    
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data } = await supabase.auth.getUser();
+      const user = data?.user;
 
       if (!user) return;
 
@@ -79,12 +82,13 @@ export default function MessagesPage() {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!supabase) return;
+    
     setLoading(true);
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data } = await supabase.auth.getUser();
+      const user = data?.user;
 
       if (!user) return;
 
@@ -112,6 +116,8 @@ export default function MessagesPage() {
   };
 
   const handleMarkAsRead = async (messageId: string) => {
+    if (!supabase) return;
+    
     try {
       const { error } = await supabase
         .from("messages")
@@ -127,7 +133,7 @@ export default function MessagesPage() {
   };
 
   const handleDeleteMessage = async (messageId: string) => {
-    if (!confirm("Delete this message?")) return;
+    if (!confirm("Delete this message?") || !supabase) return;
 
     try {
       const { error } = await supabase.from("messages").delete().eq("id", messageId);

@@ -20,6 +20,10 @@ const config: Config = {
         "muted-foreground": "hsl(var(--muted-foreground))",
         border: "hsl(var(--border))",
       },
+      borderColor: {
+        DEFAULT: "hsl(var(--border))",
+        border: "hsl(var(--border))",
+      },
       borderRadius: {
         lg: "var(--radius)",
       },

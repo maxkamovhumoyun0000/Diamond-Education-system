@@ -49,6 +49,8 @@ export default function DCoinPage() {
   }, []);
 
   const loadStudents = async () => {
+    if (!supabase) return;
+    
     try {
       const { data, error } = await supabase
         .from("profiles")
@@ -63,6 +65,8 @@ export default function DCoinPage() {
   };
 
   const loadTransactions = async () => {
+    if (!supabase) return;
+    
     try {
       const { data, error } = await supabase
         .from("dcoin_transactions")
@@ -98,12 +102,13 @@ export default function DCoinPage() {
 
   const handleAddTransaction = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!supabase) return;
+    
     setLoading(true);
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data } = await supabase.auth.getUser();
+      const user = data?.user;
 
       if (!user) return;
 

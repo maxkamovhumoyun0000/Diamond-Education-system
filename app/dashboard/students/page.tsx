@@ -23,6 +23,14 @@ interface PlacementTest {
 
 export default function StudentsPage() {
   const supabase = createClient();
+  
+  if (!supabase) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-muted-foreground">Supabase is not configured</p>
+      </div>
+    );
+  }
   const [students, setStudents] = useState<Student[]>([]);
   const [placementTests, setPlacementTests] = useState<PlacementTest[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);

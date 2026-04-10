@@ -56,6 +56,8 @@ export default function ArticlesPage() {
   }, [formData.subjectId]);
 
   const loadSubjects = async () => {
+    if (!supabase) return;
+    
     try {
       const { data, error } = await supabase.from("subjects").select("*");
       if (!error && data) {
@@ -67,7 +69,7 @@ export default function ArticlesPage() {
   };
 
   const loadLevels = async () => {
-    if (!formData.subjectId) {
+    if (!formData.subjectId || !supabase) {
       setLevels([]);
       return;
     }
@@ -88,6 +90,8 @@ export default function ArticlesPage() {
   };
 
   const loadArticles = async () => {
+    if (!supabase) return;
+    
     try {
       const { data, error } = await supabase
         .from("articles")
@@ -104,12 +108,13 @@ export default function ArticlesPage() {
 
   const handleAddArticle = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!supabase) return;
+    
     setLoading(true);
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data } = await supabase.auth.getUser();
+      const user = data?.user;
 
       if (!user) return;
 
@@ -150,7 +155,7 @@ export default function ArticlesPage() {
   };
 
   const handleDeleteArticle = async (articleId: string) => {
-    if (!confirm("Delete this article?")) return;
+    if (!confirm("Delete this article?") || !supabase) return;
 
     try {
       const { error } = await supabase.from("articles").delete().eq("id", articleId);
@@ -166,6 +171,8 @@ export default function ArticlesPage() {
   };
 
   const handlePublishToggle = async (article: Article) => {
+    if (!supabase) return;
+    
     try {
       const { error } = await supabase
         .from("articles")

@@ -59,12 +59,16 @@ export default function StudentDashboard() {
   }, []);
 
   const loadData = async () => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+    
     try {
       setLoading(true);
 
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data } = await supabase.auth.getUser();
+      const user = data?.user;
 
       if (!user) return;
 
@@ -143,11 +147,11 @@ export default function StudentDashboard() {
 
   const handleEnrollSubject = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!supabase) return;
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const { data } = await supabase.auth.getUser();
+      const user = data?.user;
 
       if (!user) return;
 

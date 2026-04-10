@@ -17,6 +17,12 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
 
+    if (!supabase) {
+      setError("Supabase is not configured. Please set up the integration.");
+      setLoading(false);
+      return;
+    }
+
     try {
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
