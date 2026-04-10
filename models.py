@@ -1,8 +1,9 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text
+from sqlalchemy import Column, Integer, BigInteger, String, Boolean, DateTime, Date, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+from sqlalchemy.orm import declarative_base
 
-from database import Base
+Base = declarative_base()
 
 
 class User(Base):
@@ -21,8 +22,6 @@ class User(Base):
     level = Column(String(40), nullable=True)
     access_enabled = Column(Boolean, default=False, nullable=False)
     group_id = Column(Integer, ForeignKey('groups.id'), nullable=True)
-    diamonds = Column(Integer, default=0, nullable=False)
-    last_diamond_update = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     failed_logins = Column(Integer, default=0, nullable=False)
     blocked = Column(Boolean, default=False, nullable=False)
@@ -64,9 +63,9 @@ class TestResult(Base):
 class Group(Base):
     __tablename__ = 'groups'
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(BigInteger, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
-    teacher_id = Column(Integer, ForeignKey('users.id'), nullable=True)
+    teacher_id = Column(BigInteger, ForeignKey('users.id'), nullable=True)
     level = Column(String(40), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
@@ -77,10 +76,10 @@ class Group(Base):
 class Attendance(Base):
     __tablename__ = 'attendance'
 
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
-    group_id = Column(Integer, ForeignKey('groups.id', ondelete='CASCADE'), nullable=False)
-    date = Column(String(10), nullable=False)  # YYYY-MM-DD format
+    id = Column(BigInteger, primary_key=True, index=True)
+    user_id = Column(BigInteger, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    group_id = Column(BigInteger, ForeignKey('groups.id', ondelete='CASCADE'), nullable=False)
+    date = Column(Date, nullable=False)  # YYYY-MM-DD format
     status = Column(String(20), default='Absent', nullable=False)  # Present/Absent
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

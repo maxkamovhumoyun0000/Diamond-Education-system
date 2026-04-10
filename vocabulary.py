@@ -1,7 +1,9 @@
 import io
 import random
+import re
 from typing import List, Dict, Any, Tuple
 from openpyxl import load_workbook
+from auth import normalize_level_to_cefr
 from db import get_conn
 from openpyxl import Workbook
 import io
@@ -12,21 +14,44 @@ EXPECTED_VOCAB_HEADERS = ['Level', 'Word', 'translation_uz', 'translation_ru', '
 def get_available_vocabulary_levels(user_level: str) -> list:
     """User levelidan past va teng leveldagi darajalarni qaytaradi"""
     level_order = ['A1', 'A2', 'B1', 'B2', 'C1']
+    raw = normalize_level_to_cefr(user_level)
+    if raw not in level_order:
+        try:
+            idx = level_order.index((user_level or "").strip().upper())
+            return level_order[: idx + 1]
+        except ValueError:
+            return level_order
     try:
-        idx = level_order.index(user_level.upper())
-        return level_order[:idx+1]  # o'zi va pastdagilar
+        idx = level_order.index(raw)
+        return level_order[: idx + 1]
     except ValueError:
-        return level_order  # agar level noto'g'ri bo'lsa hammasi
+        return level_order
 
 
-def parse_excel_bytes(file_bytes: bytes) -> List[Dict[str, Any]]:
+def vocab_language_for_subject(subject: str) -> str:
+    """words.language ustuni bilan mos: English → en, Russian → ru (import/AI bilan bir xil)."""
+    subj = (subject or "").strip().lower()
+    if "russian" in subj:
+        return "ru"
+    return "en"
+
+
+def parse_excel_bytes(file_bytes: bytes) -> tuple[List[Dict[str, Any]], list[str]]:
     wb = load_workbook(io.BytesIO(file_bytes), read_only=True)
     sheet = wb.active
     rows = list(sheet.iter_rows(values_only=True))
     if not rows:
-        return []
+        return [], []
 
-    raw_headers = [str(h).strip().lower() if h is not None else '' for h in rows[0]]
+    def normalize_header(v: Any) -> str:
+        s = str(v).strip().lower() if v is not None else ''
+        s = s.replace('-', '_')
+        s = re.sub(r'\s+', '_', s)
+        # Keep only letters/numbers/underscore so variants still match (e.g. "translation ru")
+        s = re.sub(r'[^a-z0-9_]', '', s)
+        return s
+
+    raw_headers = [normalize_header(h) for h in rows[0]]
     results = []
     for row in rows[1:]:
         if all(c is None for c in row):
@@ -38,7 +63,7 @@ def parse_excel_bytes(file_bytes: bytes) -> List[Dict[str, Any]]:
             if i >= len(raw_headers):
                 continue
             key = raw_headers[i]
-            if 'example sentence' in key or key == 'example':
+            if key.startswith('example'):
                 if cell:
                     example_parts.append(str(cell))
             else:
@@ -54,17 +79,49 @@ def parse_excel_bytes(file_bytes: bytes) -> List[Dict[str, Any]]:
         entry['example'] = '\n'.join(example_parts) if example_parts else ''
         results.append(entry)
 
-    return results
+    return results, raw_headers
+
+
+def _validate_excel_headers(raw_headers: list[str], language: str) -> None:
+    """
+    Validate that the uploaded sheet has the mandatory columns.
+    We keep this strict to make teacher mistakes visible immediately.
+    """
+    required = {'level', 'word', 'translation_uz', 'definition'}
+    if language == 'en':
+        # English template: translation_ru + mandatory definition.
+        required.add('translation_ru')
+    elif language == 'ru':
+        # Russian template: definition (plus optional example sentences).
+        pass
+    else:
+        raise ValueError(f"Unsupported language for import: {language}")
+
+    missing = sorted([c for c in required if c not in raw_headers])
+    if missing:
+        raise ValueError(
+            "Incorrect Excel headers. Missing: "
+            + ", ".join(missing)
+            + ". Please upload the provided template."
+        )
 
 
 def import_words_from_excel(file_bytes: bytes, file_name: str, added_by: int, subject: str, language: str):
-    parsed = parse_excel_bytes(file_bytes)
+    parsed, raw_headers = parse_excel_bytes(file_bytes)
+    _validate_excel_headers(raw_headers, language)
     conn = get_conn()
     cur = conn.cursor()
 
-    cur.execute('INSERT INTO vocabulary_imports (file_name, added_by, subject, language) VALUES (?,?,?,?)',
-                (file_name, added_by, subject, language))
-    import_id = cur.lastrowid
+    cur.execute(
+        '''
+        INSERT INTO vocabulary_imports (file_name, added_by, subject, language)
+        VALUES (%s, %s, %s, %s)
+        RETURNING id
+        ''',
+        (file_name, added_by, subject, language),
+    )
+    row = cur.fetchone()
+    import_id = row["id"] if row else None
 
     inserted = 0
     skipped = 0
@@ -92,6 +149,9 @@ def import_words_from_excel(file_bytes: bytes, file_name: str, added_by: int, su
         translation_ru = entry.get('translation_ru') or ''
         definition = entry.get('definition') or ''
         example = entry.get('example') or ''
+        if not str(definition).strip():
+            skipped += 1
+            continue
 
         cur.execute('''
             INSERT INTO words 
@@ -104,6 +164,11 @@ def import_words_from_excel(file_bytes: bytes, file_name: str, added_by: int, su
     conn.commit()
     conn.close()
 
+    if inserted == 0 and skipped == len(parsed):
+        # If every row was skipped due to duplicates or empty words, tell the teacher.
+        # (We don't know exact reason, but it is most often wrong headers / empty 'Word' column.)
+        pass
+
     return {
         'import_id': import_id,
         'inserted': inserted,
@@ -113,17 +178,33 @@ def import_words_from_excel(file_bytes: bytes, file_name: str, added_by: int, su
     }
 
 
-def search_words(subject: str, query: str) -> List[Dict[str, Any]]:
+def search_words(subject: str, query: str, levels: List[str] | None = None) -> List[Dict[str, Any]]:
     if not subject or not query:
         return []
-    
+
+    vocab_lang = vocab_language_for_subject(subject)
+
     conn = get_conn()
     try:
         cur = conn.cursor()
         q = f"%{query.strip().lower()}%"
-        cur.execute('''SELECT * FROM words WHERE subject=? AND (LOWER(word) LIKE ? OR LOWER(translation_uz) LIKE ? OR LOWER(translation_ru) LIKE ?) LIMIT 50''',
-                    (subject, q, q, q))
+        base_sql = 'SELECT * FROM words WHERE LOWER(subject)=LOWER(?) AND LOWER(language)=LOWER(?)'
+        params: list[Any] = [subject.strip(), vocab_lang]
+        level_clause = ''
+        if levels:
+            placeholders = ",".join(["?"] * len(levels))
+            level_clause = f" AND level IN ({placeholders})"
+            params.extend(levels)
+        filter_sql = (
+            " AND (LOWER(word) LIKE ? OR LOWER(translation_uz) LIKE ? OR LOWER(translation_ru) LIKE ? "
+            "OR LOWER(definition) LIKE ? OR LOWER(example) LIKE ?)"
+        )
+
+        sql = base_sql + level_clause + filter_sql + " LIMIT 50"
+        params.extend([q, q, q, q, q])
+        cur.execute(sql, tuple(params))
         rows = cur.fetchall()
+
         return [dict(r) for r in rows]
     except Exception as e:
         print(f"Error in search_words: {e}")
@@ -133,11 +214,14 @@ def search_words(subject: str, query: str) -> List[Dict[str, Any]]:
 
 
 def get_words_by_subject_level(subject: str, level: str) -> List[Dict[str, Any]]:
-    """Get words by subject and level from the database"""
+    """Get words by subject, course language, and level from the database"""
+    vocab_lang = vocab_language_for_subject(subject)
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute('''SELECT * FROM words WHERE subject=? AND level=? ORDER BY RANDOM() LIMIT 50''',
-                (subject, level))
+    cur.execute(
+        'SELECT * FROM words WHERE subject=? AND language=? AND level=? ORDER BY RANDOM() LIMIT 50',
+        (subject, vocab_lang, level),
+    )
     rows = cur.fetchall()
     conn.close()
     return [dict(r) for r in rows]
@@ -163,10 +247,29 @@ def get_student_preference(user_id: int) -> str:
 
 
 def _get_random_distractors(cur, subject, language, column, correct_value, count=3):
-    cur.execute(f'SELECT DISTINCT {column} FROM words WHERE subject=? AND language=? AND {column} IS NOT NULL AND LOWER({column})!=? ORDER BY RANDOM() LIMIT ?',
-                (subject, language, (correct_value or '').lower(), count))
+    # PostgreSQL: `SELECT DISTINCT ... ORDER BY RANDOM()` can fail when the ORDER BY
+    # expression isn't included in the select list. We avoid DISTINCT here and
+    # de-duplicate in Python (duplicates are still acceptable).
+    cur.execute(
+        f'SELECT {column} FROM words '
+        f'WHERE subject=? AND language=? '
+        f'AND {column} IS NOT NULL AND LOWER({column})!=? '
+        f'ORDER BY RANDOM() LIMIT ?',
+        (subject, language, (correct_value or "").lower(), count),
+    )
     rows = cur.fetchall()
-    return [r[0] for r in rows if r[0]]
+    out = []
+    for r in rows:
+        try:
+            val = r.get(column)  # psycopg dict_row
+        except Exception:
+            try:
+                val = r[0]  # sqlite row / tuple
+            except Exception:
+                val = None
+        if val:
+            out.append(val)
+    return out
 
 def _ensure_four_options(cur, subject: str, language: str, column: str, options: List[str]) -> List[str]:
     """Pad options to 4 unique items (best effort) using random values from DB."""
@@ -179,14 +282,30 @@ def _ensure_four_options(cur, subject: str, language: str, column: str, options:
     while len(seen) < 4 and tries < 5:
         need = 4 - len(seen)
         cur.execute(
-            f"SELECT DISTINCT {column} FROM words WHERE subject=? AND language=? AND {column} IS NOT NULL ORDER BY RANDOM() LIMIT ?",
+            f"SELECT {column} FROM words "
+            f"WHERE subject=? AND language=? AND {column} IS NOT NULL "
+            f"ORDER BY RANDOM() LIMIT ?",
             (subject, language, need),
         )
         for r in cur.fetchall():
-            val = r[0]
+            try:
+                val = r.get(column)  # psycopg dict_row
+            except Exception:
+                try:
+                    val = r[0]
+                except Exception:
+                    val = None
             if val and val not in seen:
                 seen.append(val)
         tries += 1
+    # Final fallback: ensure we always have 4 options for Telegram polls.
+    # Duplicates are acceptable; it is better than skipping the whole question.
+    if not seen:
+        fallback = "—"
+    else:
+        fallback = seen[0]
+    while len(seen) < 4:
+        seen.append(fallback)
     return seen[:4]
 
 
@@ -198,8 +317,9 @@ def generate_quiz(user_id: int, subject: str, level: str, count: int, qtype: str
     """
     conn = get_conn()
     cur = conn.cursor()
-    params = [subject]
-    sql = 'SELECT * FROM words WHERE subject=?'
+    vocab_lang = vocab_language_for_subject(subject)
+    params: list[Any] = [subject, vocab_lang]
+    sql = 'SELECT * FROM words WHERE subject=? AND language=?'
     if level:
         sql += ' AND level=?'
         params.append(level)
@@ -211,7 +331,30 @@ def generate_quiz(user_id: int, subject: str, level: str, count: int, qtype: str
 
     questions = []
     for w in words:
-        if qtype == 'multiple_choice':
+        if qtype == 'translation':
+            # Tarjimasini topish: so'z ko'rsatiladi, to'g'ri tarjima tanlanadi
+            subj = (subject or '').lower()
+            if subj == 'russian':
+                # Rus kursi: ruscha so'z → o'zbekcha tarjima
+                pref_col = 'translation_uz'
+            else:
+                pref_col = 'translation_uz' if preferred_translation == 'uz' else 'translation_ru'
+            correct = (w.get(pref_col) or '').strip()
+            if not correct:
+                correct = (w.get('translation_uz') or w.get('translation_ru') or '').strip()
+            if not correct:
+                continue
+            distractors = _get_random_distractors(cur, subject, w['language'], pref_col, correct, 3)
+            options = _ensure_four_options(cur, subject, w['language'], pref_col, [correct] + distractors)
+            random.shuffle(options)
+            questions.append({
+                'type': 'translation',
+                'prompt': w.get('word') or '',
+                'options': options,
+                'correct': correct,
+            })
+
+        elif qtype == 'multiple_choice':
             # Decide whether to ask for translation or the word itself randomly
             ask_translation = random.choice([True, False])
             if ask_translation:
@@ -237,7 +380,16 @@ def generate_quiz(user_id: int, subject: str, level: str, count: int, qtype: str
             example = w.get('example') or ''
             if not example or w['word'] == '':
                 # fallback to multiple choice
-                questions.append({'type': 'multiple_choice', 'prompt': w['word'], 'options': [w['word']], 'correct': w['word'], 'ask': 'word'})
+                distractors = _get_random_distractors(cur, subject, w['language'], 'word', w['word'], 3)
+                options = _ensure_four_options(cur, subject, w['language'], 'word', [w['word']] + distractors)
+                random.shuffle(options)
+                questions.append({
+                    'type': 'multiple_choice',
+                    'prompt': w['word'],
+                    'options': options,
+                    'correct': w['word'],
+                    'ask': 'word',
+                })
                 continue
             # replace first occurrence of the word (case-insensitive)
             import re
@@ -254,9 +406,15 @@ def generate_quiz(user_id: int, subject: str, level: str, count: int, qtype: str
             if not correct:
                 # fallback to multiple choice on word
                 distractors = _get_random_distractors(cur, subject, w['language'], 'word', w['word'], 3)
-                options = [w['word']] + distractors
+                options = _ensure_four_options(cur, subject, w['language'], 'word', [w['word']] + distractors)
                 random.shuffle(options)
-                questions.append({'type': 'multiple_choice', 'prompt': w['word'], 'options': options, 'correct': w['word'], 'ask': 'word'})
+                questions.append({
+                    'type': 'multiple_choice',
+                    'prompt': w['word'],
+                    'options': options,
+                    'correct': w['word'],
+                    'ask': 'word',
+                })
                 continue
             distractors = _get_random_distractors(cur, subject, w['language'], 'definition', correct, 3)
             options = _ensure_four_options(cur, subject, w['language'], 'definition', [correct] + distractors)
@@ -309,6 +467,68 @@ def export_words_to_xlsx(subject: str) -> Tuple[io.BytesIO, str]:
     # Use the same naming convention as import
     filename = f"Vocabulary_importing_List_for_{subject}.xlsx"
     return bio, filename
+
+
+def export_subject_dcoin_history_to_xlsx(
+    subject: str,
+    owner_admin_id: int | None = None,
+    lang: str = "uz",
+) -> Tuple[io.BytesIO, str]:
+    from db import get_subject_dcoin_history_rows
+    from i18n import t
+
+    subj = (subject or "").strip().title()
+    rows = get_subject_dcoin_history_rows(subj, owner_admin_id=owner_admin_id)
+    if not rows:
+        raise ValueError("empty_subject_dcoin_history")
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Dcoin History"
+    headers = [
+        "Sana/Vaqt",
+        "Fan",
+        "Login ID",
+        "Ism",
+        "Familya",
+        "O'zgarish (+/-)",
+        "Holat",
+        "Sabab",
+    ]
+    ws.append(headers)
+
+    earn_label = t(lang, "staff_dcoin_export_status_earn")
+    lose_label = t(lang, "staff_dcoin_export_status_lose")
+    for row in rows:
+        change = float(row.get("dcoin_change") or 0)
+        status_label = earn_label if change >= 0 else lose_label
+        ws.append(
+            [
+                row.get("created_at") or "",
+                row.get("subject") or subj,
+                row.get("login_id") or "",
+                row.get("first_name") or "",
+                row.get("last_name") or "",
+                f"{change:+.1f}",
+                status_label,
+                row.get("change_type") or "",
+            ]
+        )
+
+    for column in ws.columns:
+        max_length = 0
+        col_letter = column[0].column_letter
+        for cell in column:
+            cell_value = "" if cell.value is None else str(cell.value)
+            if len(cell_value) > max_length:
+                max_length = len(cell_value)
+        ws.column_dimensions[col_letter].width = min(max_length + 2, 40)
+
+    bio = io.BytesIO()
+    wb.save(bio)
+    bio.seek(0)
+    safe_subject = re.sub(r"[^A-Za-z0-9_-]+", "_", subj).strip("_") or "subject"
+    return bio, f"dcoin_history_{safe_subject}.xlsx"
 
 
 def export_all_groups_to_xlsx() -> Tuple[io.BytesIO, str]:
@@ -379,13 +599,18 @@ def export_students_to_xlsx() -> Tuple[io.BytesIO, str]:
 
 def export_full_system_to_xlsx() -> Tuple[io.BytesIO, str]:
     """
-    Export all sqlite tables into a single XLSX workbook.
+    Export all public PostgreSQL tables into a single XLSX workbook.
     Each table becomes a separate worksheet.
     """
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name")
-    tables = [r[0] for r in cur.fetchall()]
+    cur.execute("""
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+        ORDER BY table_name
+    """)
+    tables = [r["table_name"] for r in cur.fetchall()]
 
     wb = Workbook()
     # Replace default sheet with a small info sheet
@@ -405,7 +630,6 @@ def export_full_system_to_xlsx() -> Tuple[io.BytesIO, str]:
         if headers:
             ws.append(headers)
         for r in rows:
-            # sqlite3.Row supports dict/sequence access
             ws.append([r[h] for h in headers])
 
     conn.close()
@@ -415,23 +639,40 @@ def export_full_system_to_xlsx() -> Tuple[io.BytesIO, str]:
     return bio, 'diamond_full_export.xlsx'
 
 
-def export_all_attendance_to_xlsx() -> Tuple[io.BytesIO, str]:
-    """Export all attendance data to Excel"""
-    from db import get_conn, get_all_groups, get_group_users
+def export_all_attendance_to_xlsx(owner_admin_id: int | None = None) -> Tuple[io.BytesIO, str]:
+    """Export attendance to Excel. If owner_admin_id given, only that admin's groups."""
+    from db import get_conn, get_group
     
     conn = get_conn()
     cur = conn.cursor()
     
-    # Get all attendance records
-    cur.execute("""
-        SELECT a.user_id, a.group_id, a.date, a.status, 
-               u.first_name, u.last_name, u.login_id, u.telegram_id,
-               g.name as group_name, g.level as group_level
-        FROM attendance a
-        JOIN users u ON a.user_id = u.id
-        JOIN groups g ON a.group_id = g.id
-        ORDER BY a.date DESC, g.name, u.first_name
-    """)
+    if owner_admin_id is not None:
+        cur.execute("""
+            SELECT a.user_id, a.group_id, a.date, a.status, 
+                   u.first_name, u.last_name, u.login_id, u.telegram_id,
+                   g.name as group_name, g.level as group_level
+            FROM attendance a
+            JOIN users u ON a.user_id = u.id
+            JOIN groups g ON a.group_id = g.id
+            WHERE (
+                g.owner_admin_id = ?
+                OR u.id IN (
+                    SELECT student_id FROM admin_student_shares
+                    WHERE peer_admin_id = ? AND status = 'active'
+                )
+            )
+            ORDER BY a.date DESC, g.name, u.first_name
+        """, (owner_admin_id, owner_admin_id))
+    else:
+        cur.execute("""
+            SELECT a.user_id, a.group_id, a.date, a.status, 
+                   u.first_name, u.last_name, u.login_id, u.telegram_id,
+                   g.name as group_name, g.level as group_level
+            FROM attendance a
+            JOIN users u ON a.user_id = u.id
+            JOIN groups g ON a.group_id = g.id
+            ORDER BY a.date DESC, g.name, u.first_name
+        """)
     
     attendance_data = cur.fetchall()
     conn.close()

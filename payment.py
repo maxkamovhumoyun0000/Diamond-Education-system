@@ -9,11 +9,11 @@ from datetime import datetime, timedelta
 import pytz
 from openpyxl import Workbook
 
-from db import get_conn, ensure_monthly_payments_table, _ym_now, DB_WRITE_LOCK
+from db import get_conn, ensure_monthly_payments_table, ensure_overdue_penalty_log_table, _ym_now, DB_WRITE_LOCK
 
 
-def export_payment_history_to_xlsx() -> Tuple[io.BytesIO, str]:
-    """Export last 3 months of payment history to Excel with group information"""
+def export_payment_history_to_xlsx(owner_admin_id: int | None = None) -> Tuple[io.BytesIO, str]:
+    """Export last 3 months of payment history to Excel. If owner_admin_id given, only that admin's students."""
     conn = get_conn()
     cur = conn.cursor()
     
@@ -22,19 +22,38 @@ def export_payment_history_to_xlsx() -> Tuple[io.BytesIO, str]:
     three_months_ago = now - timedelta(days=90)
     three_months_ago_str = three_months_ago.strftime('%Y-%m')
     
-    # Get payment history for last 3 months with group information
-    cur.execute("""
-        SELECT mp.*, 
-               u.first_name, u.last_name, u.login_id,
-               u.phone, u.telegram_id,
-               g.name as group_name, g.level as group_level
-        FROM monthly_payments mp
-        JOIN users u ON mp.user_id = u.id
-        LEFT JOIN user_groups ug ON u.id = ug.user_id
-        LEFT JOIN groups g ON ug.group_id = g.id
-        WHERE mp.ym >= ? 
-        ORDER BY mp.ym DESC, u.first_name, u.last_name
-    """, (three_months_ago_str,))
+    if owner_admin_id is not None:
+        cur.execute("""
+            SELECT mp.*, 
+                   u.first_name, u.last_name, u.login_id,
+                   u.phone, u.telegram_id,
+                   g.name as group_name, g.level as group_level
+            FROM monthly_payments mp
+            JOIN users u ON mp.user_id = u.id
+            LEFT JOIN user_groups ug ON u.id = ug.user_id
+            LEFT JOIN groups g ON ug.group_id = g.id
+            WHERE mp.ym >= ? AND (
+                u.owner_admin_id = ?
+                OR u.id IN (
+                    SELECT student_id FROM admin_student_shares
+                    WHERE peer_admin_id = ? AND status = 'active'
+                )
+            )
+            ORDER BY mp.ym DESC, u.first_name, u.last_name
+        """, (three_months_ago_str, owner_admin_id, owner_admin_id))
+    else:
+        cur.execute("""
+            SELECT mp.*, 
+                   u.first_name, u.last_name, u.login_id,
+                   u.phone, u.telegram_id,
+                   g.name as group_name, g.level as group_level
+            FROM monthly_payments mp
+            JOIN users u ON mp.user_id = u.id
+            LEFT JOIN user_groups ug ON u.id = ug.user_id
+            LEFT JOIN groups g ON ug.group_id = g.id
+            WHERE mp.ym >= ? 
+            ORDER BY mp.ym DESC, u.first_name, u.last_name
+        """, (three_months_ago_str,))
     
     payment_data = cur.fetchall()
     conn.close()
@@ -168,24 +187,65 @@ def set_month_paid(user_id: int, ym: str | None = None, group_id: int | None = N
     with DB_WRITE_LOCK:
         conn = get_conn()
         cur = conn.cursor()
-        if paid:
-            cur.execute(
-                '''
-                INSERT INTO monthly_payments(user_id, ym, group_id, subject, paid, paid_at)
-                VALUES(?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
-                ON CONFLICT(user_id, ym, group_id) DO UPDATE SET paid=1, paid_at=CURRENT_TIMESTAMP, subject=COALESCE(excluded.subject, subject)
-                ''',
-                (user_id, ym, group_id, subject),
-            )
-        else:
-            cur.execute(
-                '''
-                INSERT INTO monthly_payments(user_id, ym, group_id, subject, paid, paid_at)
-                VALUES(?, ?, ?, ?, 0, NULL)
-                ON CONFLICT(user_id, ym, group_id) DO UPDATE SET paid=0, paid_at=NULL, subject=COALESCE(excluded.subject, subject)
-                ''',
-                (user_id, ym, group_id, subject),
-            )
+        try:
+            if paid:
+                cur.execute(
+                    '''
+                    INSERT INTO monthly_payments(user_id, ym, group_id, subject, paid, paid_at)
+                    VALUES(?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
+                    ON CONFLICT(user_id, ym, group_id) DO UPDATE SET
+                        paid=1,
+                        paid_at=CURRENT_TIMESTAMP,
+                        subject=COALESCE(excluded.subject, monthly_payments.subject)
+                    ''',
+                    (user_id, ym, group_id, subject),
+                )
+            else:
+                cur.execute(
+                    '''
+                    INSERT INTO monthly_payments(user_id, ym, group_id, subject, paid, paid_at)
+                    VALUES(?, ?, ?, ?, 0, NULL)
+                    ON CONFLICT(user_id, ym, group_id) DO UPDATE SET
+                        paid=0,
+                        paid_at=NULL,
+                        subject=COALESCE(excluded.subject, monthly_payments.subject)
+                    ''',
+                    (user_id, ym, group_id, subject),
+                )
+        except Exception:
+            try:
+                conn.rollback()
+            except Exception:
+                pass
+            # Backward compatibility:
+            # Some DBs may still have UNIQUE(user_id, ym) which conflicts when group_id differs.
+            # Fallback to ON CONFLICT(user_id, ym).
+            if paid:
+                cur.execute(
+                    '''
+                    INSERT INTO monthly_payments(user_id, ym, group_id, subject, paid, paid_at)
+                    VALUES(?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
+                    ON CONFLICT(user_id, ym) DO UPDATE SET
+                        paid=1,
+                        paid_at=CURRENT_TIMESTAMP,
+                        group_id=excluded.group_id,
+                        subject=COALESCE(excluded.subject, monthly_payments.subject)
+                    ''',
+                    (user_id, ym, group_id, subject),
+                )
+            else:
+                cur.execute(
+                    '''
+                    INSERT INTO monthly_payments(user_id, ym, group_id, subject, paid, paid_at)
+                    VALUES(?, ?, ?, ?, 0, NULL)
+                    ON CONFLICT(user_id, ym) DO UPDATE SET
+                        paid=0,
+                        paid_at=NULL,
+                        group_id=excluded.group_id,
+                        subject=COALESCE(excluded.subject, monthly_payments.subject)
+                    ''',
+                    (user_id, ym, group_id, subject),
+                )
         conn.commit()
         conn.close()
     from db import _cleanup_old_monthly_payments
@@ -206,46 +266,178 @@ def is_month_paid(user_id: int, ym: str | None = None, group_id: int | None = No
     return bool(row["paid"]) if row else False
 
 
-def was_notified_on_day(user_id: int, day: int, ym: str | None = None) -> bool:
+def was_notified_on_day(
+    user_id: int,
+    day: int,
+    ym: str | None = None,
+    group_id: int | None = None,
+) -> bool:
+    """
+    Group-specific deduplication for payment reminders.
+    If group_id is provided, dedupe is done per (user_id, ym, group_id).
+    """
     ym = ym or _ym_now()
     ensure_monthly_payments_table()
     conn = get_conn()
     cur = conn.cursor()
-    cur.execute("SELECT notified_days FROM monthly_payments WHERE user_id=? AND ym=?", (user_id, ym))
+    if group_id is None:
+        cur.execute(
+            "SELECT notified_days FROM monthly_payments WHERE user_id=? AND ym=?",
+            (user_id, ym),
+        )
+    else:
+        cur.execute(
+            "SELECT notified_days FROM monthly_payments WHERE user_id=? AND ym=? AND group_id=?",
+            (user_id, ym, group_id),
+        )
     row = cur.fetchone()
     conn.close()
+
     if not row or not row["notified_days"]:
         return False
-    days = str(row["notified_days"]).split(",")
+    days = [d.strip() for d in str(row["notified_days"]).split(",") if d.strip()]
     return str(day) in days
 
 
-def mark_notified_day(user_id: int, day: int, ym: str | None = None):
+def mark_notified_day(
+    user_id: int,
+    day: int,
+    ym: str | None = None,
+    group_id: int | None = None,
+):
+    """
+    Store which reminder days were already sent.
+    If group_id is provided, it stores per (user_id, ym, group_id).
+    """
     ym = ym or _ym_now()
     ensure_monthly_payments_table()
     with DB_WRITE_LOCK:
         conn = get_conn()
         cur = conn.cursor()
-        cur.execute("""
-            SELECT notified_days FROM monthly_payments 
-            WHERE user_id = ? AND ym = ?
-        """, (user_id, ym))
-        row = cur.fetchone()
-        if row and row["notified_days"]:
-            days = str(row["notified_days"]).split(",")
-            if str(day) not in days:
-                days.append(str(day))
-            new_days = ",".join(days)
-            cur.execute("""
-                UPDATE monthly_payments SET notified_days = ?
-                WHERE user_id = ? AND ym = ?
-            """, (new_days, user_id, ym))
+
+        if group_id is None:
+            cur.execute(
+                "SELECT notified_days FROM monthly_payments WHERE user_id=? AND ym=?",
+                (user_id, ym),
+            )
+            row = cur.fetchone()
+            if row and row["notified_days"]:
+                days = [d.strip() for d in str(row["notified_days"]).split(",") if d.strip()]
+                if str(day) not in days:
+                    days.append(str(day))
+                new_days = ",".join(days)
+                cur.execute(
+                    "UPDATE monthly_payments SET notified_days=? WHERE user_id=? AND ym=?",
+                    (new_days, user_id, ym),
+                )
+            else:
+                # Portable upsert for both SQLite/PostgreSQL
+                cur.execute(
+                    "UPDATE monthly_payments SET notified_days=? WHERE user_id=? AND ym=?",
+                    (str(day), user_id, ym),
+                )
+                if cur.rowcount == 0:
+                    cur.execute(
+                        """
+                        INSERT INTO monthly_payments (user_id, ym, group_id, subject, paid, paid_at, notified_days)
+                        VALUES (?, ?, NULL, NULL, 0, NULL, ?)
+                        """,
+                        (user_id, ym, str(day)),
+                    )
         else:
-            cur.execute("""
-                INSERT OR REPLACE INTO monthly_payments (user_id, ym, notified_days)
-                VALUES (?, ?, ?)
-            """, (user_id, ym, str(day)))
+            cur.execute(
+                "SELECT notified_days FROM monthly_payments WHERE user_id=? AND ym=? AND group_id=?",
+                (user_id, ym, group_id),
+            )
+            row = cur.fetchone()
+            if row:
+                days = [d.strip() for d in str(row["notified_days"]).split(",") if d.strip()] if row["notified_days"] else []
+                if str(day) not in days:
+                    days.append(str(day))
+                new_days = ",".join(days)
+                cur.execute(
+                    "UPDATE monthly_payments SET notified_days=? WHERE user_id=? AND ym=? AND group_id=?",
+                    (new_days, user_id, ym, group_id),
+                )
+            else:
+                cur.execute(
+                    """
+                    INSERT INTO monthly_payments (user_id, ym, group_id, subject, paid, paid_at, notified_days)
+                    VALUES (?, ?, ?, NULL, 0, NULL, ?)
+                    """,
+                    (user_id, ym, group_id, str(day)),
+                )
+
         conn.commit()
         conn.close()
+
+
+def apply_daily_overdue_penalties() -> int:
+    """
+    Har kuni kechikkan to'lovlar uchun -2 D'coin. Har bir (user, group, ym) uchun
+    kuniga bir marta -2 qo'llaniladi. Toshkent vaqtida har kuni bajariladi.
+    Qaytadi: jami qancha penalty qo'llangan.
+    """
+    from db import add_dcoins, get_all_users, get_user_groups
+    ensure_monthly_payments_table()
+    ensure_overdue_penalty_log_table()
+
+    tz = pytz.timezone("Asia/Tashkent")
+    now = datetime.now(tz)
+    today = now.strftime("%Y-%m-%d")
+    current_ym = now.strftime("%Y-%m")
+
+    count = 0
+    users = [u for u in get_all_users() if u.get('login_type') in (1, 2)]
+    max_months_back = 4
+    for u in users:
+        groups = get_user_groups(u['id'])
+        for g in groups:
+            group_id = g['id']
+            prev_ym = current_ym
+            for _ in range(max_months_back):
+                y, m = map(int, prev_ym.split('-'))
+                prev_ym = f"{y}-{m-1:02d}" if m > 1 else f"{y-1}-12"
+                if prev_ym >= current_ym:
+                    break
+                if is_month_paid(u['id'], ym=prev_ym, group_id=group_id):
+                    continue
+                inserted = False
+                with DB_WRITE_LOCK:
+                    conn = get_conn()
+                    cur = conn.cursor()
+                    cur.execute(
+                        "SELECT 1 FROM overdue_penalty_log WHERE user_id=? AND group_id=? AND ym=? AND penalty_date=?",
+                        (u['id'], group_id, prev_ym, today)
+                    )
+                    if cur.fetchone():
+                        conn.close()
+                        continue
+                    # Only apply diamonds if we actually inserted a new penalty row.
+                    # (If ON CONFLICT DO NOTHING happens, RETURNING will be empty.)
+                    try:
+                        cur.execute(
+                            # Use constant -2 to avoid NULL penalty_amount under schema drift.
+                            # Use target-less ON CONFLICT for compatibility with differing unique constraints.
+                            "INSERT INTO overdue_penalty_log (user_id, group_id, ym, penalty_date, penalty_amount) VALUES (?, ?, ?, ?, -2) ON CONFLICT DO NOTHING RETURNING 1",
+                            (u['id'], group_id, prev_ym, today),
+                        )
+                        inserted = cur.fetchone() is not None
+                    except Exception:
+                        # Fallback for schemas where ON CONFLICT target doesn't match.
+                        try:
+                            cur.execute(
+                                "INSERT INTO overdue_penalty_log (user_id, group_id, ym, penalty_date, penalty_amount) VALUES (?, ?, ?, ?, -2)",
+                                (u['id'], group_id, prev_ym, today),
+                            )
+                            inserted = True
+                        except Exception:
+                            inserted = False
+                    conn.commit()
+                    conn.close()
+                if inserted:
+                    add_dcoins(u['id'], -2, g.get('subject'), change_type="payment_penalty")
+                    count += 1
+    return count
 
 

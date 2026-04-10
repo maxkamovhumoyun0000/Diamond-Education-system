@@ -33,7 +33,6 @@ def setup_logging():
     # Set specific logger levels
     logging.getLogger('aiogram').setLevel(logging.INFO)
     logging.getLogger('aiogram.event').setLevel(logging.INFO)
-    logging.getLogger('sqlite3').setLevel(logging.WARNING)
     
     return logging.getLogger(__name__)
 

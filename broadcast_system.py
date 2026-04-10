@@ -16,7 +16,7 @@ from aiogram.exceptions import TelegramAPIError
 from logging_config import get_logger
 from db import get_all_users, get_all_students, get_user_by_id
 from i18n import t, detect_lang_from_user
-from config import ADMIN_CHAT_IDS
+from config import ALL_ADMIN_IDS
 
 logger = get_logger(__name__)
 
@@ -57,30 +57,33 @@ class BroadcastManager:
     
     async def handle_broadcast_start(self, callback: CallbackQuery):
         """Handle broadcast start"""
-        if callback.from_user.id not in ADMIN_CHAT_IDS:
-            await callback.answer("❌ Access denied")
+        if callback.from_user.id not in ALL_ADMIN_IDS:
+            lang = detect_lang_from_user(callback.from_user)
+            await callback.answer(t(lang, "broadcast_access_denied"))
             return
+        
+        lang = detect_lang_from_user(callback.from_user)
         
         state = self.get_state(callback.message.chat.id)
         state['step'] = 'ask_recipients'
+        state['admin_lang'] = lang
         
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [
-                InlineKeyboardButton(text="👥 Barcha o'quvchilar", callback_data="broadcast_recipients:all_students"),
-                InlineKeyboardButton(text="👨‍🏫 Barcha o'qituvchilar", callback_data="broadcast_recipients:all_teachers")
+                InlineKeyboardButton(text=t(lang, "broadcast_recipients_all_students"), callback_data="broadcast_recipients:all_students"),
+                InlineKeyboardButton(text=t(lang, "broadcast_recipients_all_teachers"), callback_data="broadcast_recipients:all_teachers")
             ],
             [
-                InlineKeyboardButton(text="👥 Barcha foydalanuvchilar", callback_data="broadcast_recipients:all_users"),
-                InlineKeyboardButton(text="🎯 Guruh bo'yicha", callback_data="broadcast_recipients:by_group")
+                InlineKeyboardButton(text=t(lang, "broadcast_recipients_all_users"), callback_data="broadcast_recipients:all_users"),
+                InlineKeyboardButton(text=t(lang, "broadcast_recipients_by_group"), callback_data="broadcast_recipients:by_group")
             ],
             [
-                InlineKeyboardButton(text="✏️ Qo'lda tanlang", callback_data="broadcast_recipients:custom")
+                InlineKeyboardButton(text=t(lang, "broadcast_recipients_custom"), callback_data="broadcast_recipients:custom")
             ]
         ])
         
         await callback.message.answer(
-            "📢 <b>Broadcast yaratish</b>\n\n"
-            "Qabul qiluvchilarni tanlang:",
+            t(lang, "broadcast_create_title"),
             reply_markup=keyboard,
             parse_mode='HTML'
         )
@@ -89,6 +92,7 @@ class BroadcastManager:
     async def handle_recipients_selection(self, callback: CallbackQuery):
         """Handle recipients selection"""
         state = self.get_state(callback.message.chat.id)
+        lang = detect_lang_from_user(callback.from_user)
         recipients_type = callback.data.split(':', 1)[1]
         
         if recipients_type == 'all_students':
@@ -97,9 +101,8 @@ class BroadcastManager:
             state['step'] = 'ask_content_type'
             
             await callback.message.answer(
-                f"✅ {len(students)} ta o'quvchi tanlandi\n\n"
-                "Endi yuboriladigan kontent turini tanlang:",
-                reply_markup=self._get_content_type_keyboard(),
+                t(lang, "broadcast_selected_recipients_count", count=len(students), who=t(lang, "broadcast_who_students")),
+                reply_markup=self._get_content_type_keyboard(lang),
                 parse_mode='HTML'
             )
             
@@ -110,9 +113,8 @@ class BroadcastManager:
             state['step'] = 'ask_content_type'
             
             await callback.message.answer(
-                f"✅ {len(teachers)} ta o'qituvchi tanlandi\n\n"
-                "Endi yuboriladigan kontent turini tanlang:",
-                reply_markup=self._get_content_type_keyboard(),
+                t(lang, "broadcast_selected_recipients_count", count=len(teachers), who=t(lang, "broadcast_who_teachers")),
+                reply_markup=self._get_content_type_keyboard(lang),
                 parse_mode='HTML'
             )
             
@@ -122,70 +124,68 @@ class BroadcastManager:
             state['step'] = 'ask_content_type'
             
             await callback.message.answer(
-                f"✅ {len(all_users)} ta foydalanuvchi tanlandi\n\n"
-                "Endi yuboriladigan kontent turini tanlang:",
-                reply_markup=self._get_content_type_keyboard(),
+                t(lang, "broadcast_selected_recipients_count", count=len(all_users), who=t(lang, "broadcast_who_users")),
+                reply_markup=self._get_content_type_keyboard(lang),
                 parse_mode='HTML'
             )
             
         elif recipients_type == 'by_group':
             # Implement group selection
             await callback.message.answer(
-                "🔧 Guruh bo'yicha tanlash hozircha mavjud emas.\n"
-                "Boshqa variantlardan birini tanlang."
+                t(lang, "broadcast_by_group_not_available")
             )
             
         elif recipients_type == 'custom':
             state['step'] = 'ask_custom_recipients'
             await callback.message.answer(
-                "✏️ Qabul qiluvchilarni qo'lda kiriting (user_id lari vergul bilan ajratilgan):\n\n"
-                "Masalan: 12345, 67890, 11111"
+                t(lang, "broadcast_custom_recipients_prompt", example="12345, 67890, 11111")
             )
         
         await callback.answer()
     
-    def _get_content_type_keyboard(self) -> InlineKeyboardMarkup:
+    def _get_content_type_keyboard(self, lang: str = "uz") -> InlineKeyboardMarkup:
         """Get content type selection keyboard"""
         return InlineKeyboardMarkup(inline_keyboard=[
             [
-                InlineKeyboardButton(text="📝 Matn", callback_data="broadcast_type:text"),
-                InlineKeyboardButton(text="📄 Fayl", callback_data="broadcast_type:file")
+                InlineKeyboardButton(text=t(lang, "broadcast_content_text"), callback_data="broadcast_type:text"),
+                InlineKeyboardButton(text=t(lang, "broadcast_content_file"), callback_data="broadcast_type:file")
             ],
             [
-                InlineKeyboardButton(text="🖼️ Rasm", callback_data="broadcast_type:photo"),
-                InlineKeyboardButton(text="🎥 Video", callback_data="broadcast_type:video")
+                InlineKeyboardButton(text=t(lang, "broadcast_content_photo"), callback_data="broadcast_type:photo"),
+                InlineKeyboardButton(text=t(lang, "broadcast_content_video"), callback_data="broadcast_type:video")
             ],
             [
-                InlineKeyboardButton(text="🎵 Audio", callback_data="broadcast_type:audio")
+                InlineKeyboardButton(text=t(lang, "broadcast_content_audio"), callback_data="broadcast_type:audio")
             ]
         ])
     
     async def handle_content_type_selection(self, callback: CallbackQuery):
         """Handle content type selection"""
         state = self.get_state(callback.message.chat.id)
+        lang = detect_lang_from_user(callback.from_user)
         content_type = callback.data.split(':', 1)[1]
         
         state['message_type'] = content_type
         state['step'] = 'ask_content'
         
         instructions = {
-            'text': "📝 Matn kiriting (inline tugma qo'shish uchun tugma qo'shmasdan keyin 'finish' deb yozing):",
-            'file': "📄 Fayl yuboring (PDF, DOC, XLS va h.k.):",
-            'photo': "🖼️ Rasm yuboring:",
-            'video': "🎥 Video yuboring:",
-            'audio': "🎵 Audio yuboring:"
+            'text': t(lang, "broadcast_instruction_text"),
+            'file': t(lang, "broadcast_instruction_file"),
+            'photo': t(lang, "broadcast_instruction_photo"),
+            'video': t(lang, "broadcast_instruction_video"),
+            'audio': t(lang, "broadcast_instruction_audio"),
         }
         
         await callback.message.answer(
-            instructions.get(content_type, "📝 Kontent kiriting:"),
-            reply_markup=self._get_cancel_keyboard()
+            instructions.get(content_type, t(lang, "broadcast_instruction_default")),
+            reply_markup=self._get_cancel_keyboard(lang)
         )
         await callback.answer()
     
-    def _get_cancel_keyboard(self) -> InlineKeyboardMarkup:
+    def _get_cancel_keyboard(self, lang: str = "uz") -> InlineKeyboardMarkup:
         """Get cancel keyboard"""
         return InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="❌ Bekor qilish", callback_data="broadcast_cancel")]
+            [InlineKeyboardButton(text=t(lang, "broadcast_cancel_btn"), callback_data="broadcast_cancel")]
         ])
     
     async def handle_content(self, message: Message):
@@ -206,7 +206,8 @@ class BroadcastManager:
             recipient_ids = [int(x.strip()) for x in message.text.split(',') if x.strip().isdigit()]
             
             if not recipient_ids:
-                await message.answer("❌ Noto'g'ri format. Iltimos, user_id larni vergul bilan ajrating.")
+                lang = detect_lang_from_user(message.from_user)
+                await message.answer(t(lang, "broadcast_format_error_user_ids"))
                 return
             
             # Validate user IDs
@@ -221,9 +222,9 @@ class BroadcastManager:
                     invalid_ids.append(user_id)
             
             if invalid_ids:
+                lang = detect_lang_from_user(message.from_user)
                 await message.answer(
-                    f"⚠️ Quyidagi user_id lar topilmadi: {', '.join(map(str, invalid_ids))}\n\n"
-                    f"Topilganlar: {len(valid_users)} ta"
+                    t(lang, "broadcast_invalid_user_ids_found", invalid_ids=", ".join(map(str, invalid_ids)), found_count=len(valid_users))
                 )
                 return
             
@@ -231,13 +232,17 @@ class BroadcastManager:
             state['step'] = 'ask_content_type'
             
             await message.answer(
-                f"✅ {len(valid_users)} ta foydalanuvchi tanlandi\n\n"
-                "Endi yuboriladigan kontent turini tanlang:",
-                reply_markup=self._get_content_type_keyboard()
+                t(
+                    detect_lang_from_user(message.from_user),
+                    "broadcast_custom_users_selected",
+                    count=len(valid_users),
+                ) + "\n\n" + t(detect_lang_from_user(message.from_user), "broadcast_choose_content_type"),
+                reply_markup=self._get_content_type_keyboard(detect_lang_from_user(message.from_user))
             )
             
         except ValueError:
-            await message.answer("❌ Noto'g'ri format. Iltimos, raqamlarni vergul bilan ajrating.")
+            lang = detect_lang_from_user(message.from_user)
+            await message.answer(t(lang, "broadcast_format_error_numbers"))
     
     async def _handle_content_input(self, message: Message, state: Dict[str, Any]):
         """Handle content input"""
@@ -249,52 +254,72 @@ class BroadcastManager:
                 state['step'] = 'ask_inline_button'
                 await self._ask_inline_button(message, state)
             else:
-                await message.answer("❌ Matn bo'sh. Iltimos, matn kiriting.")
+                lang = detect_lang_from_user(message.from_user)
+                await message.answer(t(lang, "broadcast_text_empty"))
         
         elif content_type == 'file':
             if message.document:
-                state['content'] = message.document
+                state['content'] = {
+                    'file_id': message.document.file_id,
+                    'caption': message.caption,
+                    'file_name': message.document.file_name,
+                }
                 state['step'] = 'ask_inline_button'
                 await self._ask_inline_button(message, state)
             else:
-                await message.answer("❌ Fayl topilmadi. Iltimos, fayl yuboring.")
+                lang = detect_lang_from_user(message.from_user)
+                await message.answer(t(lang, "broadcast_file_missing"))
         
         elif content_type == 'photo':
             if message.photo:
-                state['content'] = message.photo[-1]  # Get largest photo
+                state['content'] = {
+                    'file_id': message.photo[-1].file_id,
+                    'caption': message.caption,
+                }
                 state['step'] = 'ask_inline_button'
                 await self._ask_inline_button(message, state)
             else:
-                await message.answer("❌ Rasm topilmadi. Iltimos, rasm yuboring.")
+                lang = detect_lang_from_user(message.from_user)
+                await message.answer(t(lang, "broadcast_photo_missing"))
         
         elif content_type == 'video':
             if message.video:
-                state['content'] = message.video
+                state['content'] = {
+                    'file_id': message.video.file_id,
+                    'caption': message.caption,
+                    'file_name': message.video.file_name,
+                }
                 state['step'] = 'ask_inline_button'
                 await self._ask_inline_button(message, state)
             else:
-                await message.answer("❌ Video topilmadi. Iltimos, video yuboring.")
+                lang = detect_lang_from_user(message.from_user)
+                await message.answer(t(lang, "broadcast_video_missing"))
         
         elif content_type == 'audio':
             if message.audio:
-                state['content'] = message.audio
+                state['content'] = {
+                    'file_id': message.audio.file_id,
+                    'caption': message.caption,
+                    'file_name': message.audio.file_name,
+                }
                 state['step'] = 'ask_inline_button'
                 await self._ask_inline_button(message, state)
             else:
-                await message.answer("❌ Audio topilmadi. Iltimos, audio yuboring.")
+                lang = detect_lang_from_user(message.from_user)
+                await message.answer(t(lang, "broadcast_audio_missing"))
     
     async def _ask_inline_button(self, message: Message, state: Dict[str, Any]):
         """Ask if user wants to add inline button"""
+        lang = detect_lang_from_user(message.from_user)
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [
-                InlineKeyboardButton(text="✅ Ha, tugma qo'shish", callback_data="broadcast_add_button:yes"),
-                InlineKeyboardButton(text="❌ Yo'q, tugmasiz", callback_data="broadcast_add_button:no")
+                InlineKeyboardButton(text=t(lang, "broadcast_add_button_yes"), callback_data="broadcast_add_button:yes"),
+                InlineKeyboardButton(text=t(lang, "broadcast_add_button_no"), callback_data="broadcast_add_button:no")
             ]
         ])
         
         await message.answer(
-            "🔗 Inline tugma qo'shishni xohlaysizmi?\n\n"
-            "Tugma xabarning tagiga qo'shiladi va foydalanuvchi uni bosganda URLga o'tadi.",
+            t(lang, "broadcast_add_inline_button_prompt"),
             reply_markup=keyboard
         )
     
@@ -305,10 +330,10 @@ class BroadcastManager:
         
         if decision == 'yes':
             state['step'] = 'ask_button_text'
+            lang = detect_lang_from_user(callback.from_user)
             await callback.message.answer(
-                "🔗 Tugma nomini kiriting (1-64 belgi):\n\n"
-                "Masalan: 'Veb saytga o'tish' yoki 'To\'lov qilish'",
-                reply_markup=self._get_cancel_keyboard()
+                t(lang, "broadcast_button_name_prompt"),
+                reply_markup=self._get_cancel_keyboard(lang)
             )
         else:
             state['inline_button'] = None
@@ -326,20 +351,22 @@ class BroadcastManager:
         button_text = message.text.strip()
         
         if not button_text:
-            await message.answer("❌ Tugma nomi bo'sh. Iltimos, tugma nomini kiriting.")
+            lang = detect_lang_from_user(message.from_user)
+            await message.answer(t(lang, "broadcast_button_name_empty"))
             return
         
         if len(button_text) > 64:
-            await message.answer("❌ Tugma nomi 64 belgidan oshmasin. Iltimos, qisqaroq nom kiriting.")
+            lang = detect_lang_from_user(message.from_user)
+            await message.answer(t(lang, "broadcast_button_name_too_long"))
             return
         
         state['inline_button'] = {'text': button_text}
         state['step'] = 'ask_button_url'
         
+        lang = detect_lang_from_user(message.from_user)
         await message.answer(
-            f"✅ Tugma nomi: '{button_text}'\n\n"
-            "Endi URL manzilini kiriting (https://, t.me/, mailto: bilan boshlanishi kerak):",
-            reply_markup=self._get_cancel_keyboard()
+            t(lang, "broadcast_button_name_saved_prompt_url", button_text=button_text),
+            reply_markup=self._get_cancel_keyboard(lang)
         )
     
     async def handle_button_url(self, message: Message):
@@ -352,18 +379,15 @@ class BroadcastManager:
         button_url = message.text.strip()
         
         if not button_url:
-            await message.answer("❌ URL manzili bo'sh. Iltimos, URL kiriting.")
+            lang = detect_lang_from_user(message.from_user)
+            await message.answer(t(lang, "broadcast_url_empty"))
             return
         
         # Basic URL validation
         if not (button_url.startswith('https://') or button_url.startswith('http://') or 
                 button_url.startswith('t.me/') or button_url.startswith('mailto:')):
-            await message.answer(
-                "❌ Noto'g'ri URL format. URL quyidagilardan biri bilan boshlanishi kerak:\n"
-                "• https://example.com\n"
-                "• t.me/channel_name\n"
-                "• mailto:email@example.com"
-            )
+            lang = detect_lang_from_user(message.from_user)
+            await message.answer(t(lang, "broadcast_url_invalid_format"))
             return
         
         state['inline_button']['url'] = button_url
@@ -376,33 +400,34 @@ class BroadcastManager:
         content = state['content']
         inline_button = state.get('inline_button')
         
-        preview_text = (
-            f"📋 <b>Broadcast Preview</b>\n\n"
-            f"👥 Qabul qiluvchilar: {len(recipients)} ta\n"
-            f"📝 Kontent turi: {content_type}\n"
-        )
+        lang = detect_lang_from_user(message.from_user)
+        preview_text = t(lang, "broadcast_preview_title", recipients_count=len(recipients), content_type=content_type) + "\n"
         
         if content_type == 'text':
-            preview_text += f"💬 Matn: {content[:100]}{'...' if len(content) > 100 else ''}\n"
+            preview_text += t(
+                lang,
+                "broadcast_preview_content_text",
+                snippet=f"{content[:100]}{'...' if len(content) > 100 else ''}",
+            ) + "\n"
         elif content_type == 'file':
-            preview_text += f"📄 Fayl: {content.file_name}\n"
+            preview_text += t(lang, "broadcast_preview_content_file", filename=(content or {}).get('file_name') or 'document') + "\n"
         elif content_type == 'photo':
-            preview_text += f"🖼️ Rasm: {content.file_id}\n"
+            preview_text += t(lang, "broadcast_preview_content_photo") + "\n"
         elif content_type == 'video':
-            preview_text += f"🎥 Video: {content.file_name}\n"
+            preview_text += t(lang, "broadcast_preview_content_video", filename=(content or {}).get('file_name') or 'video') + "\n"
         elif content_type == 'audio':
-            preview_text += f"🎵 Audio: {content.file_name}\n"
+            preview_text += t(lang, "broadcast_preview_content_audio", filename=(content or {}).get('file_name') or 'audio') + "\n"
         
         if inline_button:
-            preview_text += f"🔗 Tugma: {inline_button['text']} -> {inline_button['url']}\n"
+            preview_text += t(lang, "broadcast_preview_button_line", button_text=inline_button['text'], button_url=inline_button['url']) + "\n"
         else:
-            preview_text += "🔗 Tugma: Yo'q\n"
+            preview_text += t(lang, "broadcast_preview_button_none") + "\n"
         
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [
-                InlineKeyboardButton(text="📤 Yuborish", callback_data="broadcast_confirm"),
-                InlineKeyboardButton(text="✏️ Tahrirlash", callback_data="broadcast_edit"),
-                InlineKeyboardButton(text="❌ Bekor qilish", callback_data="broadcast_cancel")
+                InlineKeyboardButton(text=t(detect_lang_from_user(message.from_user), "broadcast_confirm_send_btn"), callback_data="broadcast_confirm"),
+                InlineKeyboardButton(text=t(detect_lang_from_user(message.from_user), "broadcast_confirm_edit_btn"), callback_data="broadcast_edit"),
+                InlineKeyboardButton(text=t(detect_lang_from_user(message.from_user), "broadcast_cancel_btn"), callback_data="broadcast_cancel")
             ]
         ])
         
@@ -413,7 +438,8 @@ class BroadcastManager:
         state = self.get_state(callback.message.chat.id)
         
         if not state.get('recipients') or not state.get('content'):
-            await callback.answer("❌ Xatolik: Ma'lumotlar to'liq emas")
+            lang = detect_lang_from_user(callback.from_user)
+            await callback.answer(t(lang, "broadcast_error_incomplete_data"))
             return
         
         # Start broadcast
@@ -425,9 +451,10 @@ class BroadcastManager:
         state = self.get_state(callback.message.chat.id)
         state['step'] = 'ask_content_type'
         
+        lang = detect_lang_from_user(callback.from_user)
         await callback.message.answer(
-            "✏️ Kontentni qayta kiriting:",
-            reply_markup=self._get_content_type_keyboard()
+            t(lang, "broadcast_edit_prompt"),
+            reply_markup=self._get_content_type_keyboard(lang)
         )
         await callback.answer()
     
@@ -436,7 +463,8 @@ class BroadcastManager:
         state = self.get_state(callback.message.chat.id)
         self.reset_state(callback.message.chat.id)
         
-        await callback.message.answer("❌ Broadcast bekor qilindi.")
+        lang = detect_lang_from_user(callback.from_user)
+        await callback.message.answer(t(lang, "broadcast_cancelled"))
         await callback.answer()
     
     async def _start_broadcast(self, message: Message, state: Dict[str, Any]):
@@ -455,9 +483,7 @@ class BroadcastManager:
         }
         
         await message.answer(
-            f"📤 <b>Broadcast boshlandi...</b>\n\n"
-            f"👥 Jami: {len(recipients)} ta qabul qiluvchi\n"
-            f"⏳ Iltimos, biroz kutib turing...",
+            t(detect_lang_from_user(message.from_user), "broadcast_started_status", count=len(recipients)),
             parse_mode='HTML'
         )
         
@@ -467,15 +493,14 @@ class BroadcastManager:
         # Ask for confirmation to proceed
         keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [
-                InlineKeyboardButton(text="✅ Ha, yuborish", callback_data="broadcast_proceed"),
-                InlineKeyboardButton(text="❌ Bekor qilish", callback_data="broadcast_cancel")
+                InlineKeyboardButton(text=t(detect_lang_from_user(message.from_user), "broadcast_confirm_proceed_yes"), callback_data="broadcast_proceed"),
+                InlineKeyboardButton(text=t(detect_lang_from_user(message.from_user), "broadcast_cancel_btn"), callback_data="broadcast_cancel")
             ]
         ])
         
         await self.bot.send_message(
             message.chat.id,
-            "🔍 <b>Test message:</b>\n\n"
-            "Yuqoridagi xabarni ko'rib, yuborishni tasdiqlang:",
+            t(detect_lang_from_user(message.from_user), "broadcast_test_message_header"),
             reply_markup=keyboard,
             parse_mode='HTML'
         )
@@ -488,15 +513,15 @@ class BroadcastManager:
         state = self.get_state(callback.message.chat.id)
         
         if not state.get('test_message'):
-            await callback.answer("❌ Xatolik: Test message topilmadi")
+            lang = detect_lang_from_user(callback.from_user)
+            await callback.answer(t(lang, "broadcast_test_message_not_found"))
             return
         
         test_message = state['test_message']
         recipients = state['recipients']
         
         await callback.message.answer(
-            "📤 <b>Broadcast yuborilmoqda...</b>\n\n"
-            f"⏳ {len(recipients)} ta foydalanuvchiga yuborilmoqda...",
+            t(detect_lang_from_user(callback.from_user), "broadcast_sending_status", count=len(recipients)),
             parse_mode='HTML'
         )
         
@@ -525,32 +550,32 @@ class BroadcastManager:
             elif content_type == 'file':
                 await self.bot.send_document(
                     chat_id,
-                    content,
-                    caption="📋 <b>Test fayl</b>",
+                    content['file_id'],
+                    caption=content.get('caption') or t(self.get_state(chat_id).get("admin_lang", "uz"), "broadcast_test_caption_file"),
                     reply_markup=self._create_inline_keyboard(inline_button) if inline_button else None,
                     parse_mode='HTML'
                 )
             elif content_type == 'photo':
                 await self.bot.send_photo(
                     chat_id,
-                    content,
-                    caption="📋 <b>Test rasm</b>",
+                    content['file_id'],
+                    caption=content.get('caption') or t(self.get_state(chat_id).get("admin_lang", "uz"), "broadcast_test_caption_photo"),
                     reply_markup=self._create_inline_keyboard(inline_button) if inline_button else None,
                     parse_mode='HTML'
                 )
             elif content_type == 'video':
                 await self.bot.send_video(
                     chat_id,
-                    content,
-                    caption="📋 <b>Test video</b>",
+                    content['file_id'],
+                    caption=content.get('caption') or t(self.get_state(chat_id).get("admin_lang", "uz"), "broadcast_test_caption_video"),
                     reply_markup=self._create_inline_keyboard(inline_button) if inline_button else None,
                     parse_mode='HTML'
                 )
             elif content_type == 'audio':
                 await self.bot.send_audio(
                     chat_id,
-                    content,
-                    caption="📋 <b>Test audio</b>",
+                    content['file_id'],
+                    caption=content.get('caption') or t(self.get_state(chat_id).get("admin_lang", "uz"), "broadcast_test_caption_audio"),
                     reply_markup=self._create_inline_keyboard(inline_button) if inline_button else None,
                     parse_mode='HTML'
                 )
@@ -598,28 +623,32 @@ class BroadcastManager:
                 elif content_type == 'file':
                     await self.bot.send_document(
                         telegram_id,
-                        content,
+                        content['file_id'],
+                        caption=content.get('caption'),
                         reply_markup=inline_keyboard,
                         parse_mode='HTML'
                     )
                 elif content_type == 'photo':
                     await self.bot.send_photo(
                         telegram_id,
-                        content,
+                        content['file_id'],
+                        caption=content.get('caption'),
                         reply_markup=inline_keyboard,
                         parse_mode='HTML'
                     )
                 elif content_type == 'video':
                     await self.bot.send_video(
                         telegram_id,
-                        content,
+                        content['file_id'],
+                        caption=content.get('caption'),
                         reply_markup=inline_keyboard,
                         parse_mode='HTML'
                     )
                 elif content_type == 'audio':
                     await self.bot.send_audio(
                         telegram_id,
-                        content,
+                        content['file_id'],
+                        caption=content.get('caption'),
                         reply_markup=inline_keyboard,
                         parse_mode='HTML'
                     )
@@ -631,9 +660,15 @@ class BroadcastManager:
                     progress = ((i + 1) / len(recipients)) * 100
                     await self.bot.send_message(
                         admin_chat_id,
-                        f"📤 Progress: {progress:.1f}% ({i + 1}/{len(recipients)})\n"
-                        f"✅ Muvaffaqiyatli: {success_count}\n"
-                        f"❌ Xatolik: {failed_count}",
+                        t(
+                            self.get_state(admin_chat_id).get("admin_lang", "uz"),
+                            "broadcast_progress_report",
+                            progress=f"{progress:.1f}",
+                            current=i + 1,
+                            total=len(recipients),
+                            success=success_count,
+                            failed=failed_count,
+                        ),
                         parse_mode='HTML'
                     )
                 
@@ -660,13 +695,14 @@ class BroadcastManager:
         
         success_rate = (successful / total * 100) if total > 0 else 0
         
-        stats_text = (
-            f"📊 <b>Broadcast yakunlandi!</b>\n\n"
-            f"👥 Jami qabul qiluvchilar: {total}\n"
-            f"✅ Muvaffaqiyatli: {successful}\n"
-            f"❌ Xatolik: {failed}\n"
-            f"⏭️ O'tkazildi: {skipped}\n"
-            f"📈 Muvaffaqiyat foizi: {success_rate:.1f}%"
+        stats_text = t(
+            self.get_state(admin_chat_id).get("admin_lang", "uz"),
+            "broadcast_final_stats",
+            total=total,
+            successful=successful,
+            failed=failed,
+            skipped=skipped,
+            success_rate=f"{success_rate:.1f}",
         )
         
         await self.bot.send_message(admin_chat_id, stats_text, parse_mode='HTML')
@@ -691,8 +727,16 @@ def setup_broadcast_handlers(dp: Dispatcher, bot: Bot):
     dp.callback_query(lambda c: c.data == 'broadcast_cancel')(broadcast_manager.handle_broadcast_cancel)
     dp.callback_query(lambda c: c.data == 'broadcast_proceed')(broadcast_manager.handle_broadcast_proceed)
     
-    # Register message handlers
-    dp.message(broadcast_manager.handle_content)
+    # Register message handlers only for active broadcast steps.
+    dp.message(
+        lambda m: broadcast_manager.get_state(m.chat.id).get('step') in ('ask_custom_recipients', 'ask_content')
+    )(broadcast_manager.handle_content)
+    dp.message(
+        lambda m: broadcast_manager.get_state(m.chat.id).get('step') == 'ask_button_text'
+    )(broadcast_manager.handle_button_text)
+    dp.message(
+        lambda m: broadcast_manager.get_state(m.chat.id).get('step') == 'ask_button_url'
+    )(broadcast_manager.handle_button_url)
     
     logger.info("Broadcast handlers setup completed")
     return broadcast_manager
