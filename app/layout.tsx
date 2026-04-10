@@ -27,7 +27,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="uz" suppressHydrationWarning>
+    <html lang="uz" suppressHydrationWarning data-scroll-behavior="smooth">
       <body className="antialiased">
         <LanguageProvider>
           {children}

@@ -7,24 +7,26 @@ interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
-  timestamp: Date
+  timestamp: number
 }
 
 interface DiamondAIChatProps {
   userRole: 'student' | 'teacher' | 'admin' | 'support'
 }
 
+const initialMessages: Message[] = [
+  {
+    id: '1',
+    role: 'assistant',
+    content: 'Hello! I\'m Diamond AI, your personal learning assistant. How can I help you today?',
+    timestamp: 0,
+  },
+]
+
 export default function DiamondAIChat({ userRole }: DiamondAIChatProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
-  const [messages, setMessages] = useState<Message[]>(() => [
-    {
-      id: '1',
-      role: 'assistant',
-      content: 'Hello! I\'m Diamond AI, your personal learning assistant. How can I help you today?',
-      timestamp: new Date(),
-    },
-  ])
+  const [messages, setMessages] = useState<Message[]>(initialMessages)
   const [inputValue, setInputValue] = useState('')
   const [loading, setLoading] = useState(false)
   const [messageCount, setMessageCount] = useState(0)
@@ -106,7 +108,7 @@ export default function DiamondAIChat({ userRole }: DiamondAIChatProps) {
       id: Date.now().toString(),
       role: 'user',
       content: inputValue,
-      timestamp: new Date(),
+      timestamp: Date.now(),
     }
 
     setMessages(prev => [...prev, userMessage])
@@ -124,7 +126,7 @@ export default function DiamondAIChat({ userRole }: DiamondAIChatProps) {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         content: generateAIResponse(inputValue),
-        timestamp: new Date(),
+        timestamp: Date.now(),
       }
       setMessages(prev => [...prev, aiResponse])
       setLoading(false)
