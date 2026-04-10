@@ -10,58 +10,65 @@ export default function StudentLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading } = useAuth();
+  const { user, isLoading, isAuthenticated, logout } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && (!user || user.role !== "student")) {
+    if (!isLoading && !isAuthenticated) {
       router.push("/login");
     }
-  }, [user, loading, router]);
+  }, [user, isLoading, isAuthenticated, router]);
 
-  if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center diamond-gradient">
+        <div className="w-8 h-8 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+      </div>
+    );
   }
 
-  if (!user || user.role !== "student") {
+  if (!isAuthenticated || !user) {
     return null;
   }
 
+  const handleLogout = async () => {
+    await logout();
+    router.push("/login");
+  };
+
   return (
-    <div className="min-h-screen bg-background">
-      <nav className="bg-primary text-primary-foreground shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-[hsl(var(--background))]">
+      {/* Top Navigation */}
+      <nav className="diamond-gradient text-white shadow-lg">
+        <div className="max-w-7xl mx-auto px-4">
           <div className="flex justify-between items-center h-16">
-            <Link href="/student" className="text-2xl font-bold">
+            <Link href="/student" className="flex items-center gap-2 font-serif font-bold text-xl">
+              <div className="w-8 h-8 rounded gold-gradient flex items-center justify-center">
+                <svg className="w-4 h-4 text-[hsl(213,56%,24%)]" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                </svg>
+              </div>
               Diamond Education
             </Link>
-            <div className="flex gap-6">
-              <Link href="/student" className="hover:text-secondary transition">
+            <div className="flex items-center gap-6">
+              <Link href="/student" className="hover:text-[hsl(43,65%,52%)] transition">
                 Dashboard
               </Link>
-              <Link href="/student/arena" className="hover:text-secondary transition">
-                Arena
-              </Link>
-              <Link href="/student/tests" className="hover:text-secondary transition">
-                Tests
-              </Link>
-              <Link href="/student/leaderboard" className="hover:text-secondary transition">
-                Leaderboard
-              </Link>
               <button
-                onClick={async () => {
-                  const res = await fetch("/api/auth/logout", { method: "POST" });
-                  if (res.ok) router.push("/login");
-                }}
-                className="hover:text-secondary transition"
+                onClick={handleLogout}
+                className="hover:text-[hsl(43,65%,52%)] transition"
               >
-                Logout
+                Chiqish
               </button>
             </div>
           </div>
         </div>
       </nav>
-      <main className="max-w-7xl mx-auto px-4 py-8">{children}</main>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        {children}
+      </main>
     </div>
   );
 }
