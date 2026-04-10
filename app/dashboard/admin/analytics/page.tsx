@@ -1,8 +1,14 @@
+'use client'
+
+import { useState } from 'react'
 import DashboardLayout from '@/components/DashboardLayout'
 import StatCard from '@/components/StatCard'
-import { TrendingUp, Users, BookOpen, DollarSign, Calendar } from 'lucide-react'
+import { TrendingUp, Users, BookOpen, DollarSign, Calendar, Download, Filter } from 'lucide-react'
 
 export default function AdminAnalytics() {
+  const [timeRange, setTimeRange] = useState('30days')
+  const [showExportModal, setShowExportModal] = useState(false)
+
   return (
     <DashboardLayout role="admin" userName="Admin">
       <div className="space-y-8">
@@ -12,11 +18,25 @@ export default function AdminAnalytics() {
             <h1 className="text-4xl font-bold text-text-primary mb-2">Analytics & Reports</h1>
             <p className="text-text-secondary">System-wide performance metrics and insights</p>
           </div>
-          <select className="px-4 py-2 rounded-lg border border-border bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary">
-            <option>Last 30 Days</option>
-            <option>Last 90 Days</option>
-            <option>Last Year</option>
-          </select>
+          <div className="flex gap-2">
+            <select 
+              value={timeRange}
+              onChange={(e) => setTimeRange(e.target.value)}
+              className="px-4 py-2 rounded-lg border border-border bg-surface text-text-primary focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="7days">Last 7 Days</option>
+              <option value="30days">Last 30 Days</option>
+              <option value="90days">Last 90 Days</option>
+              <option value="year">Last Year</option>
+            </select>
+            <button 
+              onClick={() => setShowExportModal(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border hover:bg-surface-hover transition-colors font-medium"
+            >
+              <Download size={20} />
+              Export
+            </button>
+          </div>
         </div>
 
         {/* Key Metrics */}
@@ -163,10 +183,62 @@ export default function AdminAnalytics() {
                   </div>
                   <span className="text-lg font-bold text-primary">{item.value}</span>
                 </div>
-              ))}
-            </div>
+            ))}
           </div>
         </div>
+
+        {/* Export Modal */}
+        {showExportModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-surface rounded-lg border border-border p-6 max-w-md w-full">
+              <h2 className="text-2xl font-bold text-text-primary mb-4">Export Data</h2>
+              <p className="text-text-secondary mb-6">Select format and data to export:</p>
+              <div className="space-y-3 mb-6">
+                <label className="flex items-center gap-3 p-3 border border-border rounded-lg hover:bg-surface-hover cursor-pointer">
+                  <input type="radio" name="format" value="csv" defaultChecked className="w-4 h-4" />
+                  <span className="text-text-primary font-medium">CSV Format</span>
+                </label>
+                <label className="flex items-center gap-3 p-3 border border-border rounded-lg hover:bg-surface-hover cursor-pointer">
+                  <input type="radio" name="format" value="pdf" className="w-4 h-4" />
+                  <span className="text-text-primary font-medium">PDF Report</span>
+                </label>
+                <label className="flex items-center gap-3 p-3 border border-border rounded-lg hover:bg-surface-hover cursor-pointer">
+                  <input type="radio" name="format" value="excel" className="w-4 h-4" />
+                  <span className="text-text-primary font-medium">Excel Spreadsheet</span>
+                </label>
+              </div>
+              <div className="space-y-2 mb-6">
+                <label className="flex items-center gap-3 p-2 hover:bg-surface-hover rounded cursor-pointer">
+                  <input type="checkbox" defaultChecked className="w-4 h-4" />
+                  <span className="text-sm text-text-primary">User Data</span>
+                </label>
+                <label className="flex items-center gap-3 p-2 hover:bg-surface-hover rounded cursor-pointer">
+                  <input type="checkbox" defaultChecked className="w-4 h-4" />
+                  <span className="text-sm text-text-primary">Course Data</span>
+                </label>
+                <label className="flex items-center gap-3 p-2 hover:bg-surface-hover rounded cursor-pointer">
+                  <input type="checkbox" defaultChecked className="w-4 h-4" />
+                  <span className="text-sm text-text-primary">Revenue Data</span>
+                </label>
+              </div>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setShowExportModal(false)}
+                  className="flex-1 px-4 py-2 rounded-lg border border-border hover:bg-surface-hover transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => setShowExportModal(false)}
+                  className="flex-1 px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary-dark transition-colors font-medium flex items-center justify-center gap-2"
+                >
+                  <Download size={18} />
+                  Export
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </DashboardLayout>
   )
