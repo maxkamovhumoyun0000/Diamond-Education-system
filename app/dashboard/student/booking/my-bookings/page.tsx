@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { useLanguage } from '@/lib/i18n'
 import DashboardLayout from '@/components/DashboardLayout'
@@ -77,7 +77,10 @@ export default function MyBookingsPage() {
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming')
   const [bookings] = useState<SupportBooking[]>(mockBookings)
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = useMemo(() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }, [])
   const upcomingBookings = bookings.filter(b => b.date >= today && b.status !== 'cancelled')
   const pastBookings = bookings.filter(b => b.date < today || b.status === 'completed')
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useLanguage } from '@/lib/i18n'
 import DashboardLayout from '@/components/DashboardLayout'
 import { 
@@ -10,14 +10,12 @@ import {
   TrendingUp,
   ChevronLeft,
   ChevronRight,
-  Plus,
   X,
   Check,
   AlertCircle,
-  Sparkles,
-  Filter
+  Sparkles
 } from 'lucide-react'
-import type { SupportBooking, BookingStatus, TimeSlot, AttendanceStatus } from '@/types'
+import type { SupportBooking, BookingStatus, AttendanceStatus } from '@/types'
 
 // Mock bookings data
 const mockBookings: SupportBooking[] = [
@@ -108,7 +106,7 @@ const statusColors: Record<BookingStatus, string> = {
 
 export default function SupportBookingDashboard() {
   const { t } = useLanguage()
-  const [currentDate, setCurrentDate] = useState(new Date())
+  const [currentDate, setCurrentDate] = useState(() => new Date())
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [bookings, setBookings] = useState<SupportBooking[]>(mockBookings)
   const [showAttendanceModal, setShowAttendanceModal] = useState(false)
@@ -119,8 +117,11 @@ export default function SupportBookingDashboard() {
   const [filterStatus, setFilterStatus] = useState<BookingStatus | 'all'>('all')
   const [filterBranch, setFilterBranch] = useState<'all' | 'branch1' | 'branch2'>('all')
 
-  const calendarDates = generateCalendarDates(currentDate.getFullYear(), currentDate.getMonth())
-  const today = new Date().toISOString().split('T')[0]
+  const calendarDates = useMemo(() => generateCalendarDates(currentDate.getFullYear(), currentDate.getMonth()), [currentDate])
+  const today = useMemo(() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }, [])
 
   // Stats
   const todayBookings = bookings.filter(b => b.date === today).length

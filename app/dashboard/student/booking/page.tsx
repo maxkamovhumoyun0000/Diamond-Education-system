@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useLanguage } from '@/lib/i18n'
 import DashboardLayout from '@/components/DashboardLayout'
@@ -26,24 +26,7 @@ const purposes: { key: BookingPurpose; icon: React.ReactNode }[] = [
   { key: 'general', icon: <span className="text-lg">📚</span> },
 ]
 
-// Generate next 14 days
-const generateDates = () => {
-  const dates = []
-  const today = new Date()
-  for (let i = 0; i < 14; i++) {
-    const date = new Date(today)
-    date.setDate(today.getDate() + i)
-    dates.push({
-      date: date.toISOString().split('T')[0],
-      dayName: date.toLocaleDateString('en-US', { weekday: 'short' }),
-      dayNumber: date.getDate(),
-      month: date.toLocaleDateString('en-US', { month: 'short' }),
-      isToday: i === 0,
-      isWeekend: date.getDay() === 0 || date.getDay() === 6,
-    })
-  }
-  return dates
-}
+// Generate next 14 days - moved inside component with useMemo
 
 // Generate time slots
 const generateTimeSlots = (): TimeSlot[] => {
@@ -63,7 +46,24 @@ const generateTimeSlots = (): TimeSlot[] => {
 export default function StudentBookingPage() {
   const { t } = useLanguage()
   const router = useRouter()
-  const [dates] = useState(generateDates())
+  
+  const dates = useMemo(() => {
+    const result = []
+    const today = new Date()
+    for (let i = 0; i < 14; i++) {
+      const date = new Date(today)
+      date.setDate(today.getDate() + i)
+      result.push({
+        date: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
+        dayName: date.toLocaleDateString('en-US', { weekday: 'short' }),
+        dayNumber: date.getDate(),
+        month: date.toLocaleDateString('en-US', { month: 'short' }),
+        isToday: i === 0,
+        isWeekend: date.getDay() === 0 || date.getDay() === 6,
+      })
+    }
+    return result
+  }, [])
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
   const [selectedBranch, setSelectedBranch] = useState<Branch>('branch1')
