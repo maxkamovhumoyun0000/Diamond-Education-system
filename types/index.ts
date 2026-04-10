@@ -110,3 +110,56 @@ export interface BookingDate {
   closeReason?: string
   slots: TimeSlot[]
 }
+
+// Subject types
+export type Subject = 'english' | 'russian'
+export type Level = 'A1' | 'A2' | 'B1' | 'B2' | 'C1'
+export type StudentType = 'new_with_test' | 'existing_no_test'
+
+// Enhanced User with subjects and internal email
+export interface EnhancedUser {
+  id: string
+  firstName: string
+  lastName: string
+  phone: string
+  loginId: string
+  internalEmail: string // format: firstname.lastname@diamond-education.uz
+  role: UserRole
+  studentType?: StudentType
+  subjects: {
+    subject: Subject
+    level: Level
+    dcoins: number
+  }[]
+  avatar?: string
+  createdAt: number
+  updatedAt: number
+  canCreateArticles?: boolean // for teachers/support
+}
+
+// Article types
+export type ArticleStatus = 'draft' | 'published'
+export type ArticleCategory = 'grammar' | 'vocabulary' | 'motivation' | 'tips' | 'culture' | 'news' | 'general'
+export type ArticleVisibility = 'all' | 'students' | 'teachers'
+
+export interface Article {
+  id: string
+  title: string
+  slug: string
+  content: string
+  excerpt: string
+  featuredImage?: string
+  category: ArticleCategory
+  tags: string[]
+  status: ArticleStatus
+  visibility: ArticleVisibility
+  authorId: string
+  authorName: string
+  authorRole: UserRole
+  metaTitle?: string
+  metaDescription?: string
+  views: number
+  createdAt: number
+  updatedAt: number
+  publishedAt?: number
+}
