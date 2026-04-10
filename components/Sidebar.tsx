@@ -13,7 +13,8 @@ import {
   Calendar,
   ChevronRight,
   X,
-  FolderOpen
+  FolderOpen,
+  Newspaper
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useLanguage } from '@/lib/i18n'
@@ -58,6 +59,11 @@ export default function Sidebar({ role, isOpen = true, onClose }: SidebarProps) 
           icon: <Users size={20} />,
         },
         {
+          label: t('common.articles'),
+          href: `/dashboard/admin/articles`,
+          icon: <Newspaper size={20} />,
+        },
+        {
           label: t('admin.groups'),
           href: `/dashboard/admin/groups`,
           icon: <BookOpen size={20} />,
@@ -86,6 +92,11 @@ export default function Sidebar({ role, isOpen = true, onClose }: SidebarProps) 
       ],
       student: [
         ...baseItems,
+        {
+          label: t('common.articles'),
+          href: `/articles`,
+          icon: <Newspaper size={20} />,
+        },
         {
           label: t('booking.title'),
           href: `/dashboard/student/booking`,
@@ -135,6 +146,11 @@ export default function Sidebar({ role, isOpen = true, onClose }: SidebarProps) 
           href: `/dashboard/teacher/groups`,
           icon: <Users size={20} />,
           badge: 2,
+        },
+        {
+          label: t('articles.myArticles'),
+          href: `/dashboard/teacher/articles`,
+          icon: <Newspaper size={20} />,
         },
         {
           label: t('student.lessons'),

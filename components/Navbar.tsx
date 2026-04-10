@@ -6,6 +6,7 @@ import { Menu, X, LogOut, User } from 'lucide-react'
 import { useState } from 'react'
 import { useLanguage } from '@/lib/i18n'
 import LanguageSwitcher from './LanguageSwitcher'
+import SubjectSwitcher from './SubjectSwitcher'
 
 interface NavbarProps {
   userRole?: string
@@ -51,6 +52,8 @@ export default function Navbar({
 
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center gap-6">
+            {userRole === 'student' && <SubjectSwitcher />}
+            
             <Link
               href="/articles"
               className="text-text-primary hover:text-primary transition-colors font-medium text-sm"
@@ -95,6 +98,7 @@ export default function Navbar({
 
           {/* Mobile Menu Button */}
           <div className="flex items-center gap-2 md:hidden">
+            {userRole === 'student' && <SubjectSwitcher />}
             <LanguageSwitcher />
             <button
               onClick={toggleMenu}

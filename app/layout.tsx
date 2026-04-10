@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { LanguageProvider } from '@/lib/i18n'
+import { SubjectProvider } from '@/lib/subject-context'
 
 export const metadata: Metadata = {
   title: 'Diamond Education System',
@@ -30,7 +31,9 @@ export default function RootLayout({
     <html lang="uz" suppressHydrationWarning data-scroll-behavior="smooth">
       <body className="antialiased">
         <LanguageProvider>
-          {children}
+          <SubjectProvider>
+            {children}
+          </SubjectProvider>
         </LanguageProvider>
       </body>
     </html>

@@ -14,7 +14,10 @@ import {
   HeadphonesIcon,
   CheckCircle,
   Copy,
-  AlertCircle
+  AlertCircle,
+  Mail,
+  FileText,
+  Sparkles
 } from 'lucide-react'
 import { useLanguage } from '@/lib/i18n'
 
@@ -49,6 +52,31 @@ function generatePassword(): string {
   return password
 }
 
+// Generate internal email: ism.familiya@diamond-education.uz
+function generateInternalEmail(firstName: string, lastName: string): string {
+  // Transliterate Cyrillic to Latin if needed and normalize
+  const transliterate = (text: string): string => {
+    const cyrillicToLatin: Record<string, string> = {
+      'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
+      'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+      'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+      'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch',
+      'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
+      'ў': 'o', 'қ': 'q', 'ғ': 'g', 'ҳ': 'h',
+    }
+    return text.toLowerCase().split('').map(char => cyrillicToLatin[char] || char).join('')
+  }
+  
+  const normalizedFirst = transliterate(firstName.trim())
+    .toLowerCase()
+    .replace(/[^a-z]/g, '')
+  const normalizedLast = transliterate(lastName.trim())
+    .toLowerCase()
+    .replace(/[^a-z]/g, '')
+  
+  return `${normalizedFirst}.${normalizedLast}@diamond-education.uz`
+}
+
 export default function AddUserPage() {
   const router = useRouter()
   const { t } = useLanguage()
@@ -65,6 +93,8 @@ export default function AddUserPage() {
     loginId: string
     password: string
     name: string
+    internalEmail: string
+    requiresTest: boolean
   } | null>(null)
   const [copied, setCopied] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -76,25 +106,33 @@ export default function AddUserPage() {
       id: 'student-new' as UserType,
       icon: <GraduationCap size={32} />,
       label: t('addUser.newStudentTest'),
-      description: t('addUser.newStudentTest'),
+      description: 'New student who needs placement test to determine level',
+      badge: 'With Test',
+      badgeColor: 'bg-blue-100 text-blue-700',
     },
     {
       id: 'student-existing' as UserType,
       icon: <User size={32} />,
       label: t('addUser.existingStudent'),
-      description: t('addUser.existingStudent'),
+      description: 'Transfer student with known level, no test required',
+      badge: 'No Test',
+      badgeColor: 'bg-green-100 text-green-700',
     },
     {
       id: 'teacher' as UserType,
       icon: <BookOpen size={32} />,
       label: t('addUser.teacher'),
-      description: t('addUser.teacher'),
+      description: 'Instructor who teaches classes and grades students',
+      badge: 'Staff',
+      badgeColor: 'bg-purple-100 text-purple-700',
     },
     {
       id: 'support' as UserType,
       icon: <HeadphonesIcon size={32} />,
       label: t('addUser.support'),
-      description: t('addUser.support'),
+      description: 'Support staff for extra lessons and student help',
+      badge: 'Staff',
+      badgeColor: 'bg-orange-100 text-orange-700',
     },
   ]
 
@@ -112,10 +150,14 @@ export default function AddUserPage() {
       setTimeout(() => {
         const loginId = generateLoginId(userType!)
         const password = generatePassword()
+        const internalEmail = generateInternalEmail(formData.firstName, formData.lastName)
+        const requiresTest = userType === 'student-new'
         setCreatedUser({
           loginId,
           password,
           name: `${formData.firstName} ${formData.lastName}`,
+          internalEmail,
+          requiresTest,
         })
         setLoading(false)
         setStep(3)
@@ -131,7 +173,7 @@ export default function AddUserPage() {
 
   const handleCopy = async () => {
     if (createdUser) {
-      const text = `Login ID: ${createdUser.loginId}\nPassword: ${createdUser.password}`
+      const text = `Login ID: ${createdUser.loginId}\nPassword: ${createdUser.password}\nInternal Email: ${createdUser.internalEmail}`
       await navigator.clipboard.writeText(text)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
@@ -205,19 +247,51 @@ export default function AddUserPage() {
                 <button
                   key={type.id}
                   onClick={() => setUserType(type.id)}
-                  className={`p-6 rounded-xl border-2 transition-all text-left ${
+                  className={`p-6 rounded-xl border-2 transition-all text-left relative ${
                     userType === type.id
-                      ? 'border-primary bg-primary/5'
+                      ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
                       : 'border-border hover:border-primary/50 bg-surface'
                   }`}
                 >
-                  <div className={`mb-4 ${userType === type.id ? 'text-primary' : 'text-text-secondary'}`}>
+                  {/* Badge */}
+                  <span className={`absolute top-3 right-3 px-2 py-0.5 rounded-full text-xs font-medium ${type.badgeColor}`}>
+                    {type.badge}
+                  </span>
+                  
+                  <div className={`mb-3 ${userType === type.id ? 'text-primary' : 'text-text-secondary'}`}>
                     {type.icon}
                   </div>
                   <h3 className="font-semibold text-text-primary mb-1">{type.label}</h3>
+                  <p className="text-xs text-text-secondary">{type.description}</p>
+                  
+                  {/* Selection indicator */}
+                  {userType === type.id && (
+                    <div className="absolute bottom-3 right-3">
+                      <CheckCircle size={20} className="text-primary" />
+                    </div>
+                  )}
                 </button>
               ))}
             </div>
+            
+            {/* Info box for student types */}
+            {(userType === 'student-new' || userType === 'student-existing') && (
+              <div className="p-4 bg-accent/10 border border-accent/20 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <Sparkles size={20} className="text-accent flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-text-primary mb-1">
+                      {userType === 'student-new' ? 'New Student (With Placement Test)' : 'Existing Student (No Test Required)'}
+                    </p>
+                    <p className="text-xs text-text-secondary">
+                      {userType === 'student-new' 
+                        ? 'This student will need to complete a placement test after their first login to determine their starting level.'
+                        : 'This student already has a known level and will skip the placement test. Use this for transfers or returning students.'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="pt-6">
               <button
@@ -371,6 +445,34 @@ export default function AddUserPage() {
                   <label className="block text-xs text-text-secondary mb-1">{t('addUser.password')}</label>
                   <p className="text-3xl font-mono font-bold text-text-primary tracking-wider">{createdUser.password}</p>
                 </div>
+                <div className="bg-background rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Mail size={14} className="text-accent" />
+                    <label className="text-xs text-text-secondary">{t('email.internal')}</label>
+                  </div>
+                  <p className="text-lg font-mono font-semibold text-accent">{createdUser.internalEmail}</p>
+                </div>
+                
+                {/* Test requirement indicator */}
+                {(userType === 'student-new' || userType === 'student-existing') && (
+                  <div className={`flex items-center gap-3 p-4 rounded-lg ${
+                    createdUser.requiresTest 
+                      ? 'bg-blue-50 border border-blue-200' 
+                      : 'bg-green-50 border border-green-200'
+                  }`}>
+                    <FileText size={20} className={createdUser.requiresTest ? 'text-blue-600' : 'text-green-600'} />
+                    <div>
+                      <p className={`text-sm font-medium ${createdUser.requiresTest ? 'text-blue-700' : 'text-green-700'}`}>
+                        {createdUser.requiresTest ? 'Placement Test Required' : 'No Placement Test'}
+                      </p>
+                      <p className={`text-xs ${createdUser.requiresTest ? 'text-blue-600' : 'text-green-600'}`}>
+                        {createdUser.requiresTest 
+                          ? 'Student will see test prompt on first login' 
+                          : 'Student can start learning immediately'}
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Warning */}
