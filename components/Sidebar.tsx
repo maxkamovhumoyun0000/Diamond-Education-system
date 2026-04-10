@@ -14,7 +14,7 @@ import {
   ChevronRight,
   X
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface NavItem {
   label: string
@@ -30,7 +30,13 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ role, isOpen = true, onClose }: SidebarProps) {
-  const pathname = usePathname()
+  const [pathname, setPathname] = useState<string>('')
+  const pathnameHook = usePathname()
+
+  useEffect(() => {
+    setPathname(pathnameHook)
+  }, [pathnameHook])
+
   const [expandedItems, setExpandedItems] = useState<string[]>([])
 
   const toggleExpand = (label: string) => {
