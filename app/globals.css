@@ -1,0 +1,102 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Primary Colors - Diamond Blue */
+  --primary: 220 100% 45%;
+  --primary-dark: 220 100% 35%;
+  
+  /* Accent Colors - Bright Cyan/Teal */
+  --accent: 180 100% 50%;
+  --accent-light: 180 100% 70%;
+  
+  /* Neutrals */
+  --background: 0 0% 98%;
+  --foreground: 220 15% 15%;
+  --surface: 0 0% 100%;
+  --surface-hover: 220 15% 95%;
+  --border: 220 15% 90%;
+  --text-primary: 220 15% 15%;
+  --text-secondary: 220 8% 50%;
+  
+  /* Radius */
+  --radius: 12px;
+  
+  /* Transitions */
+  --duration-fast: 150ms;
+  --duration-normal: 300ms;
+  --duration-slow: 500ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: 220 15% 10%;
+    --foreground: 0 0% 100%;
+    --surface: 220 15% 15%;
+    --surface-hover: 220 15% 25%;
+    --border: 220 15% 25%;
+    --text-primary: 0 0% 100%;
+    --text-secondary: 220 8% 80%;
+  }
+}
+
+* {
+  @apply border-border;
+}
+
+body {
+  @apply bg-background text-text-primary;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-surface;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-border rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-text-secondary;
+}
+
+/* Glassmorphism utility */
+.glass {
+  @apply bg-white/10 backdrop-blur-md border border-white/20 rounded-lg;
+}
+
+.glass-dark {
+  @apply bg-black/10 backdrop-blur-md border border-black/20 rounded-lg;
+}
+
+/* Smooth transitions */
+.transition-smooth {
+  @apply transition duration-300;
+}
+
+/* Focus styles */
+.focus-ring {
+  @apply focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-smooth;
+}
