@@ -183,7 +183,8 @@ export default function AdminAnalytics() {
                   </div>
                   <span className="text-lg font-bold text-primary">{item.value}</span>
                 </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
 

@@ -4,6 +4,8 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Menu, X, LogOut, User } from 'lucide-react'
 import { useState } from 'react'
+import { useLanguage } from '@/lib/i18n'
+import LanguageSwitcher from './LanguageSwitcher'
 
 interface NavbarProps {
   userRole?: string
@@ -19,6 +21,7 @@ export default function Navbar({
   onMenuToggle,
 }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const { t } = useLanguage()
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen)
@@ -47,30 +50,33 @@ export default function Navbar({
           </Link>
 
           {/* Desktop Menu */}
-          <div className="hidden md:flex items-center gap-8">
+          <div className="hidden md:flex items-center gap-6">
             <Link
               href="/articles"
               className="text-text-primary hover:text-primary transition-colors font-medium text-sm"
             >
-              Articles
+              {t('common.articles')}
             </Link>
+            
+            <LanguageSwitcher />
+            
             {userRole && (
               <>
                 <Link
                   href={`/dashboard/${userRole}`}
                   className="text-text-primary hover:text-primary transition-colors font-medium text-sm"
                 >
-                  Dashboard
+                  {t('common.dashboard')}
                 </Link>
                 <div className="flex items-center gap-4 pl-4 border-l border-border">
                   <div className="text-right">
                     <p className="text-sm font-medium text-text-primary">{userName}</p>
-                    <p className="text-xs text-text-secondary capitalize">{userRole}</p>
+                    <p className="text-xs text-text-secondary capitalize">{t(`role.${userRole}`)}</p>
                   </div>
                   <button
                     onClick={onLogout}
                     className="p-2 hover:bg-surface-hover rounded-lg transition-colors text-text-secondary hover:text-primary"
-                    title="Logout"
+                    title={t('common.logout')}
                   >
                     <LogOut size={20} />
                   </button>
@@ -82,18 +88,21 @@ export default function Navbar({
                 href="/login"
                 className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary-dark transition-colors font-medium"
               >
-                Login
+                {t('common.login')}
               </Link>
             )}
           </div>
 
           {/* Mobile Menu Button */}
-          <button
-            onClick={toggleMenu}
-            className="md:hidden p-2 hover:bg-surface-hover rounded-lg transition-colors text-text-primary"
-          >
-            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
+          <div className="flex items-center gap-2 md:hidden">
+            <LanguageSwitcher />
+            <button
+              onClick={toggleMenu}
+              className="p-2 hover:bg-surface-hover rounded-lg transition-colors text-text-primary"
+            >
+              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
         </div>
 
         {/* Mobile Menu */}
@@ -103,7 +112,7 @@ export default function Navbar({
               href="/articles"
               className="block px-4 py-2 text-text-primary hover:bg-surface-hover rounded-lg transition-colors"
             >
-              Articles
+              {t('common.articles')}
             </Link>
             {userRole ? (
               <>
@@ -111,12 +120,12 @@ export default function Navbar({
                   href={`/dashboard/${userRole}`}
                   className="block px-4 py-2 text-text-primary hover:bg-surface-hover rounded-lg transition-colors"
                 >
-                  Dashboard
+                  {t('common.dashboard')}
                 </Link>
                 <div className="px-4 py-3 border-t border-border flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-text-primary">{userName}</p>
-                    <p className="text-xs text-text-secondary capitalize">{userRole}</p>
+                    <p className="text-xs text-text-secondary capitalize">{t(`role.${userRole}`)}</p>
                   </div>
                   <button
                     onClick={onLogout}
@@ -131,7 +140,7 @@ export default function Navbar({
                 href="/login"
                 className="block px-4 py-2 rounded-lg bg-primary text-white text-center hover:bg-primary-dark transition-colors font-medium"
               >
-                Login
+                {t('common.login')}
               </Link>
             )}
           </div>

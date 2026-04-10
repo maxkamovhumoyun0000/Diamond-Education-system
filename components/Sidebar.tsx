@@ -12,9 +12,11 @@ import {
   Trophy,
   Calendar,
   ChevronRight,
-  X
+  X,
+  FolderOpen
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import { useLanguage } from '@/lib/i18n'
 
 interface NavItem {
   label: string
@@ -32,23 +34,16 @@ interface SidebarProps {
 export default function Sidebar({ role, isOpen = true, onClose }: SidebarProps) {
   const [pathname, setPathname] = useState<string>('')
   const pathnameHook = usePathname()
+  const { t } = useLanguage()
 
   useEffect(() => {
     setPathname(pathnameHook)
   }, [pathnameHook])
 
-  const [expandedItems, setExpandedItems] = useState<string[]>([])
-
-  const toggleExpand = (label: string) => {
-    setExpandedItems(prev =>
-      prev.includes(label) ? prev.filter(i => i !== label) : [...prev, label]
-    )
-  }
-
   const getNavItems = (): NavItem[] => {
     const baseItems = [
       {
-        label: 'Dashboard',
+        label: t('common.dashboard'),
         href: `/dashboard/${role}`,
         icon: <LayoutDashboard size={20} />,
       },
@@ -58,33 +53,33 @@ export default function Sidebar({ role, isOpen = true, onClose }: SidebarProps) 
       admin: [
         ...baseItems,
         {
-          label: 'Users',
+          label: t('admin.users'),
           href: `/dashboard/admin/users`,
           icon: <Users size={20} />,
         },
         {
-          label: 'Groups',
+          label: t('admin.groups'),
           href: `/dashboard/admin/groups`,
           icon: <BookOpen size={20} />,
         },
         {
-          label: 'Analytics',
+          label: t('admin.analytics'),
           href: `/dashboard/admin/analytics`,
           icon: <BarChart3 size={20} />,
           badge: '↑12%',
         },
         {
-          label: 'Payments',
+          label: t('admin.payments'),
           href: `/dashboard/admin/payments`,
           icon: <FileText size={20} />,
         },
         {
-          label: 'AI Generator',
+          label: t('admin.aiGenerator'),
           href: `/dashboard/admin/ai-generator`,
           icon: <BookOpen size={20} />,
         },
         {
-          label: 'Settings',
+          label: t('common.settings'),
           href: `/dashboard/admin/settings`,
           icon: <Settings size={20} />,
         },
@@ -92,33 +87,38 @@ export default function Sidebar({ role, isOpen = true, onClose }: SidebarProps) 
       student: [
         ...baseItems,
         {
-          label: 'Lessons',
+          label: t('materials.title'),
+          href: `/dashboard/student/materials`,
+          icon: <FolderOpen size={20} />,
+        },
+        {
+          label: t('student.lessons'),
           href: `/dashboard/student/lessons`,
           icon: <BookOpen size={20} />,
           badge: 3,
         },
         {
-          label: 'Games',
+          label: t('student.games'),
           href: `/dashboard/student/games`,
           icon: <Trophy size={20} />,
         },
         {
-          label: 'Vocabulary',
+          label: t('student.vocabulary'),
           href: `/dashboard/student/vocabulary`,
           icon: <FileText size={20} />,
         },
         {
-          label: 'Leaderboard',
+          label: t('student.leaderboard'),
           href: `/dashboard/student/leaderboard`,
           icon: <BarChart3 size={20} />,
         },
         {
-          label: 'Homework',
+          label: t('student.homework'),
           href: `/dashboard/student/homework`,
           icon: <Calendar size={20} />,
         },
         {
-          label: 'Settings',
+          label: t('common.settings'),
           href: `/dashboard/student/settings`,
           icon: <Settings size={20} />,
         },
@@ -126,33 +126,33 @@ export default function Sidebar({ role, isOpen = true, onClose }: SidebarProps) 
       teacher: [
         ...baseItems,
         {
-          label: 'My Groups',
+          label: t('teacher.myGroups'),
           href: `/dashboard/teacher/groups`,
           icon: <Users size={20} />,
           badge: 2,
         },
         {
-          label: 'Lessons',
+          label: t('student.lessons'),
           href: `/dashboard/teacher/lessons`,
           icon: <BookOpen size={20} />,
         },
         {
-          label: 'Attendance',
+          label: t('teacher.attendance'),
           href: `/dashboard/teacher/attendance`,
           icon: <Calendar size={20} />,
         },
         {
-          label: 'Tests',
+          label: t('teacher.tests'),
           href: `/dashboard/teacher/tests`,
           icon: <FileText size={20} />,
         },
         {
-          label: 'Analytics',
+          label: t('admin.analytics'),
           href: `/dashboard/teacher/analytics`,
           icon: <BarChart3 size={20} />,
         },
         {
-          label: 'Settings',
+          label: t('common.settings'),
           href: `/dashboard/teacher/settings`,
           icon: <Settings size={20} />,
         },
@@ -160,28 +160,28 @@ export default function Sidebar({ role, isOpen = true, onClose }: SidebarProps) 
       support: [
         ...baseItems,
         {
-          label: 'Bookings',
+          label: 'Buyurtmalar',
           href: `/dashboard/support/bookings`,
           icon: <Calendar size={20} />,
           badge: 5,
         },
         {
-          label: 'Schedule',
+          label: 'Jadval',
           href: `/dashboard/support/schedule`,
           icon: <Calendar size={20} />,
         },
         {
-          label: 'Lessons',
+          label: t('student.lessons'),
           href: `/dashboard/support/lessons`,
           icon: <BookOpen size={20} />,
         },
         {
-          label: 'Analytics',
+          label: t('admin.analytics'),
           href: `/dashboard/support/analytics`,
           icon: <BarChart3 size={20} />,
         },
         {
-          label: 'Settings',
+          label: t('common.settings'),
           href: `/dashboard/support/settings`,
           icon: <Settings size={20} />,
         },

@@ -6,9 +6,11 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Navbar from '@/components/Navbar'
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react'
+import { useLanguage } from '@/lib/i18n'
 
 export default function LoginPage() {
   const router = useRouter()
+  const { t } = useLanguage()
   const [showPassword, setShowPassword] = useState(false)
   const [selectedRole, setSelectedRole] = useState<'student' | 'teacher' | 'admin' | 'support'>('student')
   const [formData, setFormData] = useState({
@@ -62,6 +64,13 @@ export default function LoginPage() {
     }
   }
 
+  const roles = [
+    { id: 'student' as const, label: t('role.student') },
+    { id: 'teacher' as const, label: t('role.teacher') },
+    { id: 'admin' as const, label: t('role.admin') },
+    { id: 'support' as const, label: t('role.support') },
+  ]
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-surface">
       <Navbar />
@@ -84,28 +93,28 @@ export default function LoginPage() {
           {/* Card */}
           <div className="bg-surface border border-border rounded-2xl p-8 shadow-lg">
             <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-text-primary mb-2">Welcome Back</h1>
-              <p className="text-text-secondary">Sign in to your Diamond account</p>
+              <h1 className="text-3xl font-bold text-text-primary mb-2">{t('login.title')}</h1>
+              <p className="text-text-secondary">{t('login.subtitle')}</p>
             </div>
 
             {/* Role Selection */}
             <div className="mb-6">
               <label className="block text-sm font-medium text-text-primary mb-3">
-                Select Your Role
+                {t('login.selectRole')}
               </label>
               <div className="grid grid-cols-2 gap-3">
-                {(['student', 'teacher', 'admin', 'support'] as const).map((r) => (
+                {roles.map((r) => (
                   <button
-                    key={r}
+                    key={r.id}
                     type="button"
-                    onClick={() => setSelectedRole(r)}
-                    className={`py-2 px-3 rounded-lg font-medium transition-all capitalize ${
-                      selectedRole === r
+                    onClick={() => setSelectedRole(r.id)}
+                    className={`py-2 px-3 rounded-lg font-medium transition-all ${
+                      selectedRole === r.id
                         ? 'bg-primary text-white'
                         : 'bg-surface-hover text-text-primary hover:border-primary border border-border'
                     }`}
                   >
-                    {r}
+                    {r.label}
                   </button>
                 ))}
               </div>
@@ -116,7 +125,7 @@ export default function LoginPage() {
             {/* Email Field */}
             <div>
               <label className="block text-sm font-medium text-text-primary mb-2">
-                Email Address
+                {t('login.email')}
               </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={20} />
@@ -135,7 +144,7 @@ export default function LoginPage() {
             {/* Password Field */}
             <div>
               <label className="block text-sm font-medium text-text-primary mb-2">
-                Password
+                {t('login.password')}
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={20} />
@@ -179,16 +188,16 @@ export default function LoginPage() {
               disabled={loading}
               className="w-full py-3 px-4 rounded-lg bg-primary text-white font-semibold hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? t('common.loading') : t('login.button')}
             </button>
             </form>
 
             {/* Footer */}
             <div className="mt-6 text-center text-sm text-text-secondary">
               <p>
-                Don&apos;t have an account?{' '}
+                {t('login.noAccount')}{' '}
                 <Link href="#" className="text-primary hover:underline font-medium">
-                  Sign up
+                  {t('login.register')}
                 </Link>
               </p>
             </div>
@@ -200,7 +209,7 @@ export default function LoginPage() {
               href="/"
               className="text-primary hover:underline font-medium text-sm"
             >
-              ← Back to home
+              {t('common.back')}
             </Link>
           </div>
         </div>
