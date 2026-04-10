@@ -13,6 +13,7 @@
   --accent-foreground: 0 0% 100%;
   --muted: 200 5% 90%;
   --muted-foreground: 200 5% 40%;
+  --border: 200 10% 85%;
   --radius: 0.5rem;
 }
 
@@ -28,6 +29,7 @@
     --accent-foreground: 200 40% 20%;
     --muted: 200 10% 25%;
     --muted-foreground: 200 5% 60%;
+    --border: 200 10% 25%;
   }
 }
 
