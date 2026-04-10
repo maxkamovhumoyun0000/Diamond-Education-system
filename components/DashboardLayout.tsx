@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Navbar from './Navbar'
 import Sidebar from './Sidebar'
+import DiamondAIChat from './DiamondAIChat'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -38,6 +39,7 @@ export default function DashboardLayout({
           </div>
         </main>
       </div>
+      <DiamondAIChat userRole={role} />
     </div>
   )
 }

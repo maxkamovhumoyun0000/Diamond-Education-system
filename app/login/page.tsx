@@ -10,7 +10,6 @@ import { Eye, EyeOff, Mail, Lock } from 'lucide-react'
 export default function LoginPage() {
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
-  const [role, setRole] = useState<'student' | 'teacher' | 'admin' | 'support'>('student')
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -36,22 +35,22 @@ export default function LoginPage() {
       // Simulate login - in production, this would call an API
       await new Promise(resolve => setTimeout(resolve, 1000))
 
-      // Demo credentials
-      const demoUsers: Record<string, { password: string; name: string }> = {
-        'admin@diamond.edu': { password: 'admin123', name: 'Admin' },
-        'student@diamond.edu': { password: 'student123', name: 'Ahmed' },
-        'teacher@diamond.edu': { password: 'teacher123', name: 'Fatima' },
-        'support@diamond.edu': { password: 'support123', name: 'Support Staff' },
+      // Demo credentials with auto-detected roles
+      const demoUsers: Record<string, { password: string; name: string; role: 'admin' | 'student' | 'teacher' | 'support' }> = {
+        'admin@diamond.edu': { password: 'admin123', name: 'Admin', role: 'admin' },
+        'student@diamond.edu': { password: 'student123', name: 'Ahmed', role: 'student' },
+        'teacher@diamond.edu': { password: 'teacher123', name: 'Fatima', role: 'teacher' },
+        'support@diamond.edu': { password: 'support123', name: 'Support Staff', role: 'support' },
       }
 
       const user = demoUsers[formData.email]
       if (user && user.password === formData.password) {
         // Store session (in production, use secure cookies)
-        localStorage.setItem('userRole', role)
+        localStorage.setItem('userRole', user.role)
         localStorage.setItem('userName', user.name)
         localStorage.setItem('userEmail', formData.email)
         
-        router.push(`/dashboard/${role}`)
+        router.push(`/dashboard/${user.role}`)
       } else {
         setError('Invalid email or password. Try admin@diamond.edu / admin123')
       }
@@ -110,76 +109,76 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Form */}
-            <form onSubmit={handleLogin} className="space-y-4">
-              {/* Email Field */}
-              <div>
-                <label className="block text-sm font-medium text-text-primary mb-2">
-                  Email Address
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={20} />
-                  <input
-                    type="email"
-                    name="email"
-                    placeholder="admin@diamond.edu"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    className="w-full pl-10 pr-4 py-3 border border-border rounded-lg bg-surface-hover text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary transition-all"
-                    required
-                  />
-                </div>
+          {/* Form */}
+          <form onSubmit={handleLogin} className="space-y-6">
+            {/* Email Field */}
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-2">
+                Email Address
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={20} />
+                <input
+                  type="email"
+                  name="email"
+                  placeholder="your@email.com"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  className="w-full pl-10 pr-4 py-3 border border-border rounded-lg bg-surface-hover text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+                  required
+                />
               </div>
+            </div>
 
-              {/* Password Field */}
-              <div>
-                <label className="block text-sm font-medium text-text-primary mb-2">
-                  Password
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={20} />
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    name="password"
-                    placeholder="••••••••"
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    className="w-full pl-10 pr-10 py-3 border border-border rounded-lg bg-surface-hover text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary transition-all"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary transition-colors"
-                  >
-                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </button>
-                </div>
+            {/* Password Field */}
+            <div>
+              <label className="block text-sm font-medium text-text-primary mb-2">
+                Password
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary" size={20} />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  placeholder="••••••••"
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  className="w-full pl-10 pr-10 py-3 border border-border rounded-lg bg-surface-hover text-text-primary placeholder:text-text-secondary focus:outline-none focus:ring-2 focus:ring-primary transition-all"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary hover:text-text-primary transition-colors"
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
               </div>
+            </div>
 
-              {/* Error Message */}
-              {error && (
-                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-600 text-sm">
-                  {error}
-                </div>
-              )}
-
-              {/* Demo Credentials */}
-              <div className="p-3 rounded-lg bg-accent/10 border border-accent/20 text-accent text-sm">
-                <p className="font-medium mb-1">Demo Credentials:</p>
-                <p>Admin: admin@diamond.edu / admin123</p>
-                <p>Student: student@diamond.edu / student123</p>
-                <p>Teacher: teacher@diamond.edu / teacher123</p>
+            {/* Error Message */}
+            {error && (
+              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-600 text-sm">
+                {error}
               </div>
+            )}
 
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3 px-4 rounded-lg bg-primary text-white font-semibold hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Signing in...' : 'Sign In'}
-              </button>
+            {/* Demo Credentials */}
+            <div className="p-3 rounded-lg bg-accent/10 border border-accent/20 text-accent text-sm">
+              <p className="font-medium mb-1">Demo Credentials:</p>
+              <p>Admin: admin@diamond.edu / admin123</p>
+              <p>Student: student@diamond.edu / student123</p>
+              <p>Teacher: teacher@diamond.edu / teacher123</p>
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 px-4 rounded-lg bg-primary text-white font-semibold hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Signing in...' : 'Sign In'}
+            </button>
             </form>
 
             {/* Footer */}

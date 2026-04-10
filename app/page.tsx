@@ -1,12 +1,16 @@
+'use client'
+
 import Link from 'next/link'
 import Image from 'next/image'
 import Navbar from '@/components/Navbar'
+import DiamondAIChat from '@/components/DiamondAIChat'
 import { ArrowRight, Sparkles, Users, BookOpen, Trophy } from 'lucide-react'
 
 export default function Home() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-surface">
       <Navbar />
+      <DiamondAIChat userRole="student" />
 
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32">

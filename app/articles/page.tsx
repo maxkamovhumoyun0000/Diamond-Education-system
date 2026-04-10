@@ -1,7 +1,11 @@
+'use client'
+
 import Link from 'next/link'
 import Image from 'next/image'
 import Navbar from '@/components/Navbar'
+import DiamondAIChat from '@/components/DiamondAIChat'
 import { Clock, User, ArrowRight, Search } from 'lucide-react'
+import { useState } from 'react'
 
 export default function ArticlesPage() {
   const articles = [
@@ -69,9 +73,12 @@ export default function ArticlesPage() {
 
   const categories = ['All', 'Speaking', 'Grammar', 'Vocabulary', 'Idioms', 'Listening', 'Business']
 
+  const [searchQuery, setSearchQuery] = useState('')
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-background to-surface">
       <Navbar />
+      <DiamondAIChat userRole="student" />
 
       {/* Hero Section */}
       <section className="bg-gradient-to-r from-primary to-primary-dark text-white py-16 md:py-24">
