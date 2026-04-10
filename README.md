@@ -1,38 +1,38 @@
-# Diamond Education Admin Panel
+# Diamond Education - Unified Platform
 
-A comprehensive admin control panel for managing students, articles, groups, and the D'coin reward system for the Diamond Education platform.
+A comprehensive educational platform integrating FastAPI backend, Next.js frontend, PostgreSQL database, and Telegram bot system for complete learning management.
 
-## Features
+## Core Features
 
-### 🎓 Student Management
-- Add and manage students (regular and support types)
-- Track student levels (A1-C2 IELTS levels)
-- Assign students to groups
-- Monitor student attendance and progress
+### Admin Dashboard
+- **Student Management**: CRUD operations, placement tests, level assignment
+- **Group Management**: Create groups, manage enrollment, track progress
+- **Articles**: Content creation with role-based visibility
+- **D'Coin System**: Rewards, deductions, transfers, bonuses
+- **Internal Messaging**: Staff communication and notifications
+- **Vocabulary Management**: Word lists by level and category
 
-### 📚 Articles Management
-- Create and publish educational articles
-- Control article visibility (Teachers, Support Teachers, Students)
-- Organize articles by subject and level
-- Rich text editing capabilities
+### Student Portal  
+- **Personal Dashboard**: Stats, groups, quick actions
+- **Arena**: Competitive battles with other students, ranking system
+- **Daily Tests**: Subject-based tests with scoring
+- **Vocabulary**: Interactive word learning by category
+- **Leaderboard**: Global and group rankings
+- **Progress Tracking**: Test results, scores, D'coin history
 
-### 👥 Group Management
-- Create study groups with subject and level specifications
-- Assign teachers to groups
-- Manage student enrollment in groups
-- Track group progress and attendance
+### Telegram Integration
+- Multiple bots for different user roles
+- Real-time synchronization with web platform
+- Command-based interactions
+- Inline keyboards for actions
 
-### 💰 D'Coin System
-- Digital reward currency for student motivation
-- Track D'coin balances and transactions
-- Award coins for achievements and participation
-- Deduct coins for policy violations
-- View transaction history
-
-### 💬 Internal Communication
-- Send messages between staff members
-- Create notifications for system events
-- Manage communication logs
+### Advanced Features
+- **Arena System**: 1v1 and group battles with scoring
+- **Duel Mode**: Direct challenges between students
+- **Grammar System**: Interactive grammar lessons and exercises
+- **Vocabulary Builder**: Spaced repetition and categories
+- **Daily Challenges**: Recurring tests with bonus rewards
+- **Leaderboards**: Global, group, and category-specific rankings
 
 ## Technology Stack
 
