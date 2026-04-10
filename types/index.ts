@@ -71,3 +71,42 @@ export interface SupportTicket {
   createdAt: Date
   priority: 'low' | 'medium' | 'high'
 }
+
+export type BookingPurpose = 'speaking' | 'grammar' | 'writing' | 'reading' | 'listening' | 'general'
+export type BookingStatus = 'pending' | 'approved' | 'completed' | 'cancelled'
+export type AttendanceStatus = 'present' | 'late' | 'absent'
+export type Branch = 'branch1' | 'branch2'
+
+export interface TimeSlot {
+  id: string
+  time: string
+  available: boolean
+  blocked: boolean
+  blockReason?: string
+}
+
+export interface SupportBooking {
+  id: string
+  studentId: string
+  studentName: string
+  date: string
+  time: string
+  branch: Branch
+  purpose: BookingPurpose
+  status: BookingStatus
+  teacherId?: string
+  teacherName?: string
+  attendance?: AttendanceStatus
+  dcoinCost: number
+  dcoinBonus?: number
+  bonusReason?: string
+  createdAt: number
+  updatedAt: number
+}
+
+export interface BookingDate {
+  date: string
+  closed: boolean
+  closeReason?: string
+  slots: TimeSlot[]
+}

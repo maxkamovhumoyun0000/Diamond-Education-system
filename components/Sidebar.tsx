@@ -87,6 +87,11 @@ export default function Sidebar({ role, isOpen = true, onClose }: SidebarProps) 
       student: [
         ...baseItems,
         {
+          label: t('booking.title'),
+          href: `/dashboard/student/booking`,
+          icon: <Calendar size={20} />,
+        },
+        {
           label: t('materials.title'),
           href: `/dashboard/student/materials`,
           icon: <FolderOpen size={20} />,
@@ -160,15 +165,10 @@ export default function Sidebar({ role, isOpen = true, onClose }: SidebarProps) 
       support: [
         ...baseItems,
         {
-          label: 'Buyurtmalar',
-          href: `/dashboard/support/bookings`,
+          label: t('support.dashboard'),
+          href: `/dashboard/support/booking`,
           icon: <Calendar size={20} />,
           badge: 5,
-        },
-        {
-          label: 'Jadval',
-          href: `/dashboard/support/schedule`,
-          icon: <Calendar size={20} />,
         },
         {
           label: t('student.lessons'),
