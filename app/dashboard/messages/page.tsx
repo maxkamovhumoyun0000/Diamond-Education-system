@@ -57,8 +57,8 @@ export default function MessagesPage() {
     if (!supabase) return;
     
     try {
-      const { data } = await supabase.auth.getUser();
-      const user = data?.user;
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData?.user;
 
       if (!user) return;
 
@@ -70,10 +70,10 @@ export default function MessagesPage() {
         query = query.eq("sender_id", user.id);
       }
 
-      const { data, error } = await query.order("created_at", { ascending: false });
+      const { data: messagesData, error } = await query.order("created_at", { ascending: false });
 
-      if (!error && data) {
-        setMessages(data);
+      if (!error && messagesData) {
+        setMessages(messagesData);
       }
     } catch (error) {
       console.log("[v0] Error loading messages:", error);
