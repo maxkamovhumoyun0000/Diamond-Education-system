@@ -58,8 +58,8 @@ export default function StudentArticlesPage() {
     
     try {
       setLoading(true);
-      const { data } = await supabase.auth.getUser();
-      const user = data?.user;
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData?.user;
 
       if (!user) return;
 
@@ -88,10 +88,10 @@ export default function StudentArticlesPage() {
         query = query.eq("level_id", filterLevel);
       }
 
-      const { data, error } = await query.order("created_at", { ascending: false });
+      const { data: articlesData, error } = await query.order("created_at", { ascending: false });
 
-      if (!error && data) {
-        setArticles(data);
+      if (!error && articlesData) {
+        setArticles(articlesData);
         // Load levels for selected subject
         if (filterSubject) {
           const { data: levelData } = await supabase
