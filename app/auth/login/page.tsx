@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -10,18 +11,13 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
-    if (!supabase) {
-      setError("Supabase is not configured. Please set up the integration.");
-      setLoading(false);
-      return;
-    }
+    const supabase = createClient();
 
     try {
       const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -33,6 +29,7 @@ export default function LoginPage() {
         setError(signInError.message);
       } else {
         router.push("/dashboard");
+        router.refresh();
       }
     } catch (err) {
       setError("An unexpected error occurred");
@@ -44,7 +41,8 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary to-accent flex items-center justify-center p-4">
       <div className="bg-background rounded-lg shadow-lg p-8 max-w-md w-full">
-        <h1 className="text-3xl font-bold text-primary mb-6">Sign In</h1>
+        <h1 className="text-3xl font-bold text-primary mb-2">Diamond Education</h1>
+        <p className="text-muted-foreground mb-6">Sign in to your account</p>
 
         <form onSubmit={handleSignIn} className="space-y-4">
           {error && (
@@ -61,7 +59,7 @@ export default function LoginPage() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2 border border-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground"
               placeholder="you@example.com"
               required
             />
@@ -75,7 +73,7 @@ export default function LoginPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 border border-muted rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              className="w-full px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground"
               placeholder="••••••••"
               required
             />
@@ -92,9 +90,9 @@ export default function LoginPage() {
 
         <p className="text-center text-muted-foreground mt-6">
           Don&apos;t have an account?{" "}
-          <a href="/auth/sign-up" className="text-primary hover:underline">
+          <Link href="/auth/sign-up" className="text-primary hover:underline">
             Sign up
-          </a>
+          </Link>
         </p>
       </div>
     </div>

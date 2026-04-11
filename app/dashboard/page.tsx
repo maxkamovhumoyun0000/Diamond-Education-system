@@ -1,20 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import Link from "next/link";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  
-  let user = null;
-  if (supabase) {
-    const { data } = await supabase.auth.getUser();
-    user = data?.user;
-  }
+  const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-muted-foreground">Not authenticated</p>
-      </div>
-    );
+    redirect("/auth/login");
   }
 
   return (
@@ -23,22 +16,22 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Stats Cards */}
-        <div className="bg-background border border-muted rounded-lg p-6">
+        <div className="bg-background border border-border rounded-lg p-6">
           <h3 className="text-muted-foreground text-sm font-medium">Total Students</h3>
           <p className="text-3xl font-bold text-primary mt-2">--</p>
         </div>
 
-        <div className="bg-background border border-muted rounded-lg p-6">
+        <div className="bg-background border border-border rounded-lg p-6">
           <h3 className="text-muted-foreground text-sm font-medium">Active Groups</h3>
           <p className="text-3xl font-bold text-secondary mt-2">--</p>
         </div>
 
-        <div className="bg-background border border-muted rounded-lg p-6">
+        <div className="bg-background border border-border rounded-lg p-6">
           <h3 className="text-muted-foreground text-sm font-medium">Published Articles</h3>
           <p className="text-3xl font-bold text-accent mt-2">--</p>
         </div>
 
-        <div className="bg-background border border-muted rounded-lg p-6">
+        <div className="bg-background border border-border rounded-lg p-6">
           <h3 className="text-muted-foreground text-sm font-medium">D&apos;coin Transactions</h3>
           <p className="text-3xl font-bold text-primary mt-2">--</p>
         </div>
@@ -46,32 +39,32 @@ export default async function DashboardPage() {
 
       <div className="mt-12 grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Quick Actions */}
-        <div className="bg-background border border-muted rounded-lg p-6">
+        <div className="bg-background border border-border rounded-lg p-6">
           <h2 className="text-xl font-bold text-foreground mb-4">Quick Actions</h2>
           <div className="space-y-2">
-            <a
+            <Link
               href="/dashboard/students"
               className="block px-4 py-3 bg-primary text-primary-foreground rounded hover:opacity-90 transition text-center"
             >
               Add New Student
-            </a>
-            <a
+            </Link>
+            <Link
               href="/dashboard/articles"
               className="block px-4 py-3 bg-secondary text-secondary-foreground rounded hover:opacity-90 transition text-center"
             >
               Create Article
-            </a>
-            <a
+            </Link>
+            <Link
               href="/dashboard/groups"
               className="block px-4 py-3 bg-accent text-accent-foreground rounded hover:opacity-90 transition text-center"
             >
               Create Group
-            </a>
+            </Link>
           </div>
         </div>
 
         {/* System Info */}
-        <div className="bg-background border border-muted rounded-lg p-6">
+        <div className="bg-background border border-border rounded-lg p-6">
           <h2 className="text-xl font-bold text-foreground mb-4">System Information</h2>
           <div className="space-y-3 text-sm">
             <div>

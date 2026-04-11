@@ -1,13 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
+import Link from "next/link";
 
 export default async function Home() {
   const supabase = await createClient();
-  
-  let user = null;
-  if (supabase) {
-    const { data } = await supabase.auth.getUser();
-    user = data?.user;
-  }
+  const { data: { user } } = await supabase.auth.getUser();
 
   if (user) {
     return (
@@ -17,12 +13,12 @@ export default async function Home() {
             <h1 className="text-4xl font-bold text-primary mb-4">Diamond Education</h1>
             <p className="text-lg text-muted-foreground mb-8">Admin Control Panel</p>
             <p className="text-foreground mb-8">Welcome, {user.email}</p>
-            <a
+            <Link
               href="/dashboard"
               className="inline-block px-6 py-3 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition"
             >
               Go to Dashboard
-            </a>
+            </Link>
           </div>
         </div>
       </div>
@@ -36,18 +32,18 @@ export default async function Home() {
         <p className="text-muted-foreground mb-6">Admin Control Panel</p>
         <p className="text-foreground mb-8">Please log in to continue</p>
         <div className="space-y-4">
-          <a
+          <Link
             href="/auth/login"
             className="block w-full text-center px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition"
           >
             Sign In
-          </a>
-          <a
+          </Link>
+          <Link
             href="/auth/sign-up"
             className="block w-full text-center px-4 py-2 border-2 border-primary text-primary rounded-lg hover:bg-primary hover:text-primary-foreground transition"
           >
             Create Account
-          </a>
+          </Link>
         </div>
       </div>
     </div>
